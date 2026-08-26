@@ -122,7 +122,7 @@ jobs:
               echo "should_run=true" >> $GITHUB_OUTPUT
             else
               echo "📥 Downloading latest.json to check version..."
-              LATEST_JSON_URL="https://github.com/clash-verge-rev/clash-verge-rev/releases/download/autobuild/latest.json"
+              LATEST_JSON_URL="${{ github.server_url }}/${{ github.repository }}/releases/download/autobuild/latest.json"
               
               LATEST_JSON_CONTENT=$(curl -sL "$LATEST_JSON_URL" 2>/dev/null || echo "")
               

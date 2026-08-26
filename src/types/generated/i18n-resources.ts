@@ -1208,7 +1208,6 @@ export interface TranslationResources {
         actions: {
           github: string
           manual: string
-          telegram: string
         }
         actionsGroupLabel: string
         title: string

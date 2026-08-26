@@ -1,4 +1,4 @@
-import { GitHub, HelpOutlineRounded, Telegram } from '@mui/icons-material'
+import { GitHub, HelpOutlineRounded } from '@mui/icons-material'
 import { Box, ButtonGroup, IconButton, Grid } from '@mui/material'
 import { useLockFn } from 'ahooks'
 import { useTranslation } from 'react-i18next'
@@ -31,10 +31,6 @@ const SettingPage = () => {
     ),
   )
 
-  const toTelegramChannel = useLockFn(() =>
-    openExternalUrl('https://t.me/clash_verge_re').catch(onError),
-  )
-
   const mode = useThemeMode()
   const isDark = mode === 'light' ? false : true
 
@@ -54,15 +50,6 @@ const SettingPage = () => {
           >
             <HelpOutlineRounded fontSize="inherit" />
           </IconButton>
-          <IconButton
-            size="medium"
-            color="inherit"
-            title={t('settings.page.actions.telegram')}
-            onClick={toTelegramChannel}
-          >
-            <Telegram fontSize="inherit" />
-          </IconButton>
-
           <IconButton
             size="medium"
             color="inherit"
