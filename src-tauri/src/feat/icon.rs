@@ -3,10 +3,13 @@ use crate::{
     utils::dirs::{self, PathBufExec as _},
 };
 use clash_verge_logging::{Type, logging};
+use futures::StreamExt as _;
 use smartstring::alias::String;
 use std::path::{Component, Path, PathBuf};
 use tokio::fs;
 use tokio::io::AsyncWriteExt as _;
+
+const MAX_ICON_SIZE: usize = 5 * 1024 * 1024;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct IconInfo {
@@ -70,6 +73,29 @@ fn is_supported_icon_content(content: &[u8]) -> bool {
     tauri::image::Image::from_bytes(content).is_ok() || looks_like_svg(content)
 }
 
+fn append_icon_chunk(content: &mut Vec<u8>, chunk: &[u8]) -> CmdResult<()> {
+    if content.len().saturating_add(chunk.len()) > MAX_ICON_SIZE {
+        return Err(format!("Downloaded icon exceeds {MAX_ICON_SIZE} bytes").into());
+    }
+    content.extend_from_slice(chunk);
+    Ok(())
+}
+
+async fn read_icon_response(response: reqwest::Response) -> CmdResult<Vec<u8>> {
+    if response.content_length().is_some_and(|length| length > MAX_ICON_SIZE as u64) {
+        return Err(format!("Downloaded icon exceeds {MAX_ICON_SIZE} bytes").into());
+    }
+
+    let capacity = response.content_length().unwrap_or_default() as usize;
+    let mut content = Vec::with_capacity(capacity.min(MAX_ICON_SIZE));
+    let mut stream = response.bytes_stream();
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.stringify_err()?;
+        append_icon_chunk(&mut content, &chunk)?;
+    }
+    Ok(content)
+}
+
 pub async fn download_icon_cache(url: String, name: String) -> CmdResult<String> {
     let icon_cache_dir = dirs::app_home_dir().stringify_err()?.join("icons").join("cache");
     let icon_name = normalize_icon_segment(name.as_str())?;
@@ -88,7 +114,7 @@ pub async fn download_icon_cache(url: String, name: String) -> CmdResult<String>
 
     let response = reqwest::get(url.as_str()).await.stringify_err()?;
     let response = response.error_for_status().stringify_err()?;
-    let content = response.bytes().await.stringify_err()?;
+    let content = read_icon_response(response).await?;
 
     if !is_supported_icon_content(&content) {
         let _ = temp_path.remove_if_exists().await;
