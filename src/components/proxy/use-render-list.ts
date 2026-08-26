@@ -266,6 +266,13 @@ export const useRenderList = (
         : [proxyView.global]
     const cache = groupCacheRef.current
     let anyChanged = false
+    const activeGroupNames = new Set(renderGroups.map((group) => group.name))
+    for (const groupName of cache.keys()) {
+      if (!activeGroupNames.has(groupName)) {
+        cache.delete(groupName)
+        anyChanged = true
+      }
+    }
 
     const retList = renderGroups.flatMap((group) => {
       const headState = headStates[group.name] || DEFAULT_STATE
