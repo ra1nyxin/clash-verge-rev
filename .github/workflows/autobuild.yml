@@ -17,7 +17,7 @@ env:
   RUST_BACKTRACE: short
   HUSKY: 0
 concurrency:
-  group: '${{ github.workflow }} - ${{ github.head_ref || github.ref }}'
+  group: '${{ github.workflow }} - ${{ github.ref }} - ${{ github.sha }}'
   cancel-in-progress: true
 
 jobs:
@@ -25,17 +25,32 @@ jobs:
     name: Update tag
     runs-on: ubuntu-latest
     outputs:
+      should_build: ${{ steps.check_latest.outputs.should_build }}
       release_id: ${{ steps.upload_release.outputs.id }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
 
+      - name: Check latest branch commit
+        id: check_latest
+        shell: bash
+        run: |
+          latest_sha=$(git ls-remote origin "refs/heads/$GITHUB_REF_NAME" | cut -f1)
+          if [ "$GITHUB_SHA" = "$latest_sha" ]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+            echo "Skip outdated commit $GITHUB_SHA; latest is $latest_sha"
+          fi
+
       - name: Set build time
+        if: steps.check_latest.outputs.should_build == 'true'
         run: |
           echo "BUILDTIME=$(TZ=Asia/Shanghai date)" >> $GITHUB_ENV
         shell: bash
 
       - name: Create release notes
+        if: steps.check_latest.outputs.should_build == 'true'
         run: |
           cat > release.txt << EOF
           此预发布始终对应仓库最新一次成功的自动构建，旧资产会在新构建开始时清理。
@@ -45,11 +60,13 @@ jobs:
           EOF
 
       - name: Move autobuild tag
+        if: steps.check_latest.outputs.should_build == 'true'
         run: |
           git tag --force "$TAG_NAME" "$GITHUB_SHA"
           git push origin "refs/tags/$TAG_NAME" --force
 
       - name: Upload Release
+        if: steps.check_latest.outputs.should_build == 'true'
         id: upload_release
         uses: softprops/action-gh-release@v3
         with:
@@ -62,6 +79,7 @@ jobs:
           generate_release_notes: false
 
       - name: Clean old release assets
+        if: steps.check_latest.outputs.should_build == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -76,6 +94,7 @@ jobs:
   autobuild-x86-windows-macos-linux:
     name: Autobuild x86 Windows, MacOS and Linux
     needs: update_tag
+    if: needs.update_tag.outputs.should_build == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -163,6 +182,7 @@ jobs:
   autobuild-arm-linux:
     name: Autobuild ARM Linux
     needs: update_tag
+    if: needs.update_tag.outputs.should_build == 'true'
     strategy:
       fail-fast: false
       matrix:
