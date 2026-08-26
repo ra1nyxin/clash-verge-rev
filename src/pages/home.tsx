@@ -4,7 +4,6 @@ import {
   HistoryEduOutlined,
   RouterOutlined,
   SettingsOutlined,
-  SpeedOutlined,
 } from '@mui/icons-material'
 import {
   Box,
@@ -29,7 +28,6 @@ import { BasePage } from '@/components/base'
 import { ClashModeCard } from '@/components/home/clash-mode-card'
 import { CurrentProxyCard } from '@/components/home/current-proxy-card'
 import { EnhancedCard } from '@/components/home/enhanced-card'
-import { EnhancedTrafficStats } from '@/components/home/enhanced-traffic-stats'
 import { HomeProfileCard } from '@/components/home/home-profile-card'
 import { ProxyTunCard } from '@/components/home/proxy-tun-card'
 import { useProfiles } from '@/hooks/use-profiles'
@@ -76,7 +74,6 @@ interface HomeCardsSettings {
   proxy: boolean
   network: boolean
   mode: boolean
-  traffic: boolean
   info: boolean
   clashinfo: boolean
   systeminfo: boolean
@@ -91,7 +88,6 @@ const DEFAULT_HOME_CARDS: HomeCardsSettings = {
   proxy: true,
   network: true,
   mode: true,
-  traffic: true,
   clashinfo: true,
   systeminfo: true,
   test: true,
@@ -171,15 +167,6 @@ const HomeSettingsDialog = ({
               />
             }
             label={t('home.page.settings.cards.proxyMode')}
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={cards.traffic || false}
-                onChange={() => handleToggle('traffic')}
-              />
-            }
-            label={t('home.page.settings.cards.traffic')}
           />
           <FormControlLabel
             control={
@@ -282,17 +269,6 @@ const HomePage = () => {
   const nonCriticalCards = useMemo(
     () => [
       renderCard(
-        'traffic',
-        <EnhancedCard
-          title={t('home.page.cards.trafficStats')}
-          icon={<SpeedOutlined />}
-          iconColor="secondary"
-        >
-          <EnhancedTrafficStats />
-        </EnhancedCard>,
-        12,
-      ),
-      renderCard(
         'test',
         <Suspense fallback={<Skeleton variant="rectangular" height={200} />}>
           <LazyTestCard />
@@ -317,7 +293,7 @@ const HomePage = () => {
         </Suspense>,
       ),
     ],
-    [t, renderCard],
+    [renderCard],
   )
   return (
     <BasePage

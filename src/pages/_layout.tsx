@@ -33,7 +33,6 @@ import iconLight from '@/assets/image/icon_light.svg?react'
 import LogoSvg from '@/assets/image/logo.svg?react'
 import { BaseErrorBoundary } from '@/components/base'
 import { LayoutItem } from '@/components/layout/layout-item'
-import { LayoutTraffic } from '@/components/layout/layout-traffic'
 import { NoticeManager } from '@/components/layout/notice-manager'
 import { ServiceMigrationDialog } from '@/components/layout/service-migration-dialog'
 import { SysproxyPrivilegeDialog } from '@/components/layout/sysproxy-privilege-dialog'
@@ -448,9 +447,6 @@ const Layout = () => {
               </MenuItem>
             </Menu>
 
-            <div className="the-traffic">
-              <LayoutTraffic />
-            </div>
           </div>
 
           <div className="layout-content__right">
