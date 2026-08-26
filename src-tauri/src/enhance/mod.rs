@@ -27,6 +27,8 @@ use std::collections::{HashMap, HashSet};
 use tokio::fs;
 
 type ResultLog = Vec<(String, String)>;
+
+pub(crate) use script::run_script_worker_if_requested;
 #[derive(Debug)]
 struct ConfigValues {
     clash_config: Mapping,

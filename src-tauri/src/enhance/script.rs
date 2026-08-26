@@ -1,26 +1,138 @@
-use crate::process::AsyncHandler;
-
 use super::field::{use_lowercase, use_lowercase_owned};
-use anyhow::{Error, Result};
+use anyhow::{Context as _, Error, Result};
 use boa_engine::{Context, JsString, JsValue, Source, native_function::NativeFunction};
 use clash_verge_logging::{Type, logging_error};
 use parking_lot::Mutex;
+use serde::{Deserialize, Serialize};
 use serde_yaml_ng::Mapping;
 use smartstring::alias::String;
-use std::sync::Arc;
+use std::{
+    io::{Read, Write as _},
+    process::{Command, ExitCode, Stdio},
+    sync::Arc,
+    thread,
+    time::Instant,
+};
 
 const MAX_OUTPUTS: usize = 1000;
 const MAX_OUTPUT_SIZE: usize = 1024 * 1024; // 1MB
 const MAX_JSON_SIZE: usize = 10 * 1024 * 1024; // 10MB
 const MAX_LOOP_ITERATIONS: u64 = 10_000_000;
 const SCRIPT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+const SCRIPT_WORKER_ARG: &str = "--internal-script-worker";
+const MAX_WORKER_MESSAGE_SIZE: usize = MAX_JSON_SIZE * 2 + MAX_OUTPUT_SIZE;
+
+#[derive(Serialize, Deserialize)]
+struct ScriptWorkerRequest {
+    script: String,
+    config: Mapping,
+    name: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct ScriptWorkerResponse {
+    result: std::result::Result<(Mapping, Vec<(String, String)>), std::string::String>,
+}
 
 pub async fn use_script(script: String, config: Mapping, name: String) -> Result<(Mapping, Vec<(String, String)>)> {
-    let handle = AsyncHandler::spawn_blocking(move || use_script_sync(script, &config, &name));
-    match tokio::time::timeout(SCRIPT_TIMEOUT, handle).await {
-        Ok(Ok(result)) => result,
-        Ok(Err(join_err)) => Err(anyhow::anyhow!("script task panicked: {join_err}")),
-        Err(_elapsed) => Err(anyhow::anyhow!("script execution timed out after {:?}", SCRIPT_TIMEOUT)),
+    let handle = tokio::task::spawn_blocking(move || run_script_worker(script, config, name));
+    handle.await.context("script worker task panicked")?
+}
+
+fn read_pipe_limited(mut pipe: impl Read, limit: usize) -> Result<Vec<u8>> {
+    let mut bytes = Vec::new();
+    pipe.by_ref().take((limit + 1) as u64).read_to_end(&mut bytes)?;
+    if bytes.len() > limit {
+        anyhow::bail!("script worker response exceeds {limit} bytes");
+    }
+    Ok(bytes)
+}
+
+fn run_script_worker(script: String, config: Mapping, name: String) -> Result<(Mapping, Vec<(String, String)>)> {
+    let request = serde_json::to_vec(&ScriptWorkerRequest { script, config, name })?;
+    if request.len() > MAX_WORKER_MESSAGE_SIZE {
+        anyhow::bail!("script worker request exceeds {MAX_WORKER_MESSAGE_SIZE} bytes");
+    }
+
+    let mut command = Command::new(std::env::current_exe()?);
+    command
+        .arg(SCRIPT_WORKER_ARG)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt as _;
+        command.creation_flags(0x0800_0000);
+    }
+
+    let child = command.spawn().context("failed to start script worker")?;
+    let mut child = scopeguard::guard(child, |mut child| {
+        let _ = child.kill();
+        let _ = child.wait();
+    });
+    child
+        .stdin
+        .take()
+        .context("script worker stdin is unavailable")?
+        .write_all(&request)?;
+
+    let stdout = child.stdout.take().context("script worker stdout is unavailable")?;
+    let stderr = child.stderr.take().context("script worker stderr is unavailable")?;
+    let stdout_reader = thread::spawn(move || read_pipe_limited(stdout, MAX_WORKER_MESSAGE_SIZE));
+    let stderr_reader = thread::spawn(move || read_pipe_limited(stderr, MAX_OUTPUT_SIZE));
+    let deadline = Instant::now() + SCRIPT_TIMEOUT;
+
+    let status = loop {
+        if let Some(status) = child.try_wait()? {
+            break status;
+        }
+        if Instant::now() >= deadline {
+            let _ = child.kill();
+            let _ = child.wait();
+            anyhow::bail!("script execution timed out after {SCRIPT_TIMEOUT:?}");
+        }
+        thread::sleep(std::time::Duration::from_millis(20));
+    };
+
+    let stdout = stdout_reader.join().map_err(|_| anyhow::anyhow!("script worker stdout reader panicked"))??;
+    let stderr = stderr_reader.join().map_err(|_| anyhow::anyhow!("script worker stderr reader panicked"))??;
+    if !status.success() {
+        anyhow::bail!("script worker failed: {}", std::string::String::from_utf8_lossy(&stderr));
+    }
+
+    let response: ScriptWorkerResponse = serde_json::from_slice(&stdout).context("invalid script worker response")?;
+    response.result.map_err(anyhow::Error::msg)
+}
+
+pub(crate) fn run_script_worker_if_requested() -> Option<ExitCode> {
+    if std::env::args().nth(1).as_deref() != Some(SCRIPT_WORKER_ARG) {
+        return None;
+    }
+
+    let result = (|| -> Result<ScriptWorkerResponse> {
+        let mut request = Vec::new();
+        std::io::stdin()
+            .take((MAX_WORKER_MESSAGE_SIZE + 1) as u64)
+            .read_to_end(&mut request)?;
+        if request.len() > MAX_WORKER_MESSAGE_SIZE {
+            anyhow::bail!("script worker request is too large");
+        }
+        let request: ScriptWorkerRequest = serde_json::from_slice(&request)?;
+        Ok(ScriptWorkerResponse {
+            result: use_script_sync(request.script, &request.config, &request.name).map_err(|error| error.to_string()),
+        })
+    })();
+
+    match result.and_then(|response| {
+        serde_json::to_writer(std::io::stdout().lock(), &response)?;
+        Ok(())
+    }) {
+        Ok(()) => Some(ExitCode::SUCCESS),
+        Err(error) => {
+            eprintln!("script worker error: {error:#}");
+            Some(ExitCode::FAILURE)
+        }
     }
 }
 

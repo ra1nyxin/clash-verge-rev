@@ -26,6 +26,10 @@ use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_deep_link::DeepLinkExt as _;
 
 pub static APP_HANDLE: OnceCell<AppHandle> = OnceCell::new();
+
+pub fn run_script_worker_if_requested() -> Option<std::process::ExitCode> {
+    enhance::run_script_worker_if_requested()
+}
 /// Application initialization helper functions
 mod app_init {
     use super::*;
