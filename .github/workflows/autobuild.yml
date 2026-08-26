@@ -287,12 +287,10 @@ jobs:
           NODE_OPTIONS: '--max_old_space_size=4096'
 
       - name: Upload Release
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: ${{ env.TAG_NAME }}
-          name: 'Clash Verge Rev ${{ env.TAG_CHANNEL }}'
-          prerelease: true
-          token: ${{ secrets.GITHUB_TOKEN }}
-          files: |
-            target/${{ matrix.target }}/release/bundle/deb/*.deb
-            target/${{ matrix.target }}/release/bundle/rpm/*.rpm
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "$TAG_NAME" \
+            target/${{ matrix.target }}/release/bundle/deb/*.deb \
+            target/${{ matrix.target }}/release/bundle/rpm/*.rpm \
+            --clobber
