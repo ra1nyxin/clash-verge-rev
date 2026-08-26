@@ -8,7 +8,7 @@ import { DialogRef, TooltipIcon } from '@/components/base'
 import { useVerge } from '@/hooks/use-verge'
 import { navigationItems } from '@/pages/_navigation-meta'
 import { copyClashEnv } from '@/services/cmds'
-import { supportedLanguages } from '@/services/i18n'
+import { resolveLanguage, supportedLanguages } from '@/services/i18n'
 import { showNotice } from '@/services/notice-service'
 import getSystem from '@/utils/get-system'
 
@@ -32,18 +32,7 @@ const OS = getSystem()
 const languageOptions = supportedLanguages.map((code) => {
   const labels: { [key: string]: string } = {
     en: 'English',
-    ru: 'Русский',
     zh: '简体中文',
-    fa: 'فارسی',
-    tt: 'Татар',
-    id: 'Bahasa Indonesia',
-    ar: 'العربية',
-    ko: '한국어',
-    tr: 'Türkçe',
-    de: 'Deutsch',
-    es: 'Español',
-    jp: '日本語',
-    zhtw: '繁體中文',
   }
   const label = labels[code] || code
   return { code, label }
@@ -90,7 +79,7 @@ const SettingVergeBasic = ({ onError }: Props) => {
 
       <SettingItem label={t('settings.components.verge.basic.fields.language')}>
         <GuardState
-          value={language ?? 'en'}
+          value={resolveLanguage(language)}
           onCatch={onError}
           onFormat={(e: any) => e.target.value}
           onChange={(e) => onChangeData({ language: e })}

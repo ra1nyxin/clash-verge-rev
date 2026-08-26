@@ -44,6 +44,7 @@ import {
 import { useI18n } from '@/hooks/use-i18n'
 import { useVerge } from '@/hooks/use-verge'
 import { useWindowDecorations } from '@/hooks/use-window'
+import { resolveLanguage } from '@/services/i18n'
 import { useThemeMode } from '@/services/states'
 import getSystem from '@/utils/get-system'
 
@@ -57,7 +58,6 @@ import {
 import { handleNoticeMessage } from './_layout/utils'
 import { navItems } from './_navigation'
 
-import 'dayjs/locale/ru'
 import 'dayjs/locale/zh-cn'
 
 type NavItem = (typeof navItems)[number]
@@ -236,7 +236,7 @@ const Layout = () => {
 
   useEffect(() => {
     if (language) {
-      dayjs.locale(language === 'zh' ? 'zh-cn' : language)
+      dayjs.locale(resolveLanguage(language) === 'zh' ? 'zh-cn' : 'en')
       switchLanguage(language)
     }
   }, [language, switchLanguage])
