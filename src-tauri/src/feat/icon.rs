@@ -8,8 +8,11 @@ use smartstring::alias::String;
 use std::path::{Component, Path, PathBuf};
 use tokio::fs;
 use tokio::io::AsyncWriteExt as _;
+use tokio::sync::Semaphore;
 
 const MAX_ICON_SIZE: usize = 5 * 1024 * 1024;
+const MAX_CONCURRENT_ICON_DOWNLOADS: usize = 2;
+static ICON_DOWNLOAD_LIMIT: Semaphore = Semaphore::const_new(MAX_CONCURRENT_ICON_DOWNLOADS);
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct IconInfo {
@@ -73,12 +76,16 @@ fn is_supported_icon_content(content: &[u8]) -> bool {
     tauri::image::Image::from_bytes(content).is_ok() || looks_like_svg(content)
 }
 
-fn append_icon_chunk(content: &mut Vec<u8>, chunk: &[u8]) -> CmdResult<()> {
-    if content.len().saturating_add(chunk.len()) > MAX_ICON_SIZE {
-        return Err(format!("Downloaded icon exceeds {MAX_ICON_SIZE} bytes").into());
+fn append_icon_chunk_with_limit(content: &mut Vec<u8>, chunk: &[u8], limit: usize) -> CmdResult<()> {
+    if content.len().saturating_add(chunk.len()) > limit {
+        return Err(format!("Downloaded icon exceeds {limit} bytes").into());
     }
     content.extend_from_slice(chunk);
     Ok(())
+}
+
+fn append_icon_chunk(content: &mut Vec<u8>, chunk: &[u8]) -> CmdResult<()> {
+    append_icon_chunk_with_limit(content, chunk, MAX_ICON_SIZE)
 }
 
 async fn read_icon_response(response: reqwest::Response) -> CmdResult<Vec<u8>> {
@@ -107,6 +114,14 @@ pub async fn download_icon_cache(url: String, name: String) -> CmdResult<String>
 
     if !icon_cache_dir.exists() {
         fs::create_dir_all(&icon_cache_dir).await.stringify_err()?;
+    }
+
+    let _download_permit = match ICON_DOWNLOAD_LIMIT.acquire().await {
+        Ok(permit) => permit,
+        Err(error) => return Err(error.to_string().into()),
+    };
+    if icon_path.exists() {
+        return Ok(icon_path.to_string_lossy().into());
     }
 
     let temp_name = format!("{icon_name}.downloading");
@@ -197,5 +212,19 @@ pub async fn copy_icon_file(path: String, icon_info: IconInfo) -> CmdResult<Stri
         }
     } else {
         Err("file not found".into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::append_icon_chunk_with_limit;
+
+    #[test]
+    fn icon_chunks_stop_at_the_configured_limit() {
+        let mut content = vec![1, 2];
+        assert!(append_icon_chunk_with_limit(&mut content, &[3, 4], 4).is_ok());
+        assert_eq!(content, [1, 2, 3, 4]);
+        assert!(append_icon_chunk_with_limit(&mut content, &[5], 4).is_err());
+        assert_eq!(content, [1, 2, 3, 4]);
     }
 }
