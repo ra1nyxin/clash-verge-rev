@@ -102,10 +102,6 @@ fn determine_update_flags(patch: &IVerge) -> UpdateFlags {
     let socks_port = patch.verge_socks_port;
     let http_enabled = patch.verge_http_enabled;
     let http_port = patch.verge_port;
-    #[cfg(target_os = "macos")]
-    let enable_tray_speed = patch.enable_tray_speed;
-    #[cfg(not(target_os = "macos"))]
-    let enable_tray_speed: Option<bool> = None;
     // let enable_tray_icon = patch.enable_tray_icon;
     let enable_global_hotkey = patch.enable_global_hotkey;
     let tray_event = &patch.tray_event;
@@ -175,7 +171,6 @@ fn determine_update_flags(patch: &IVerge) -> UpdateFlags {
         || sysproxy_tray_icon.is_some()
         || tun_tray_icon.is_some()
         || tray_icon.is_some()
-        || enable_tray_speed.is_some()
     {
         update_flags.insert(UpdateFlags::SYSTRAY_ICON);
     }
@@ -251,10 +246,6 @@ async fn process_terminated_flags(update_flags: UpdateFlags, patch: &IVerge) -> 
         tray::Tray::global()
             .update_icon(&Config::verge().await.latest_arc())
             .await?;
-        #[cfg(target_os = "macos")]
-        if patch.enable_tray_speed.is_some() {
-            tray::Tray::global().update_speed_task(patch.enable_tray_speed.unwrap_or(false));
-        }
     }
     if update_flags.contains(UpdateFlags::SYSTRAY_TOOLTIP) {
         tray::Tray::global().update_tooltip().await?;

@@ -866,10 +866,7 @@ interface IVergeConfig {
   start_page?: string
   clash_core?: string
   theme_mode?: 'light' | 'dark' | 'system'
-  traffic_graph?: boolean
-  enable_memory_usage?: boolean
   enable_group_icon?: boolean
-  pause_render_traffic_stats_on_blur?: boolean
   menu_icon?: 'monochrome' | 'colorful' | 'disable'
   menu_order?: string[]
   notice_position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
@@ -878,7 +875,6 @@ interface IVergeConfig {
   common_tray_icon?: boolean
   sysproxy_tray_icon?: boolean
   tun_tray_icon?: boolean
-  enable_tray_speed?: boolean
   tray_proxy_groups_display_mode?: 'default' | 'inline' | 'disable'
   tray_inline_outbound_modes?: boolean
   enable_tun_mode?: boolean

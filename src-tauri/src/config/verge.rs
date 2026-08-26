@@ -33,15 +33,8 @@ pub struct IVerge {
     pub start_page: Option<String>,
     pub startup_script: Option<String>,
 
-    pub traffic_graph: Option<bool>,
-
-    /// show memory info (only for Clash Meta)
-    pub enable_memory_usage: Option<bool>,
-
     #[serde(skip_serializing_if = "Option::is_none")]
     pub enable_group_icon: Option<bool>,
-
-    pub pause_render_traffic_stats_on_blur: Option<bool>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub common_tray_icon: Option<bool>,
@@ -182,9 +175,6 @@ pub struct IVerge {
         default
     )]
     pub webdav_password: Option<String>,
-
-    #[cfg(target_os = "macos")]
-    pub enable_tray_speed: Option<bool>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tray_proxy_groups_display_mode: Option<String>,
@@ -328,10 +318,7 @@ impl IVerge {
             #[cfg(target_os = "windows")]
             env_type: Some("powershell".into()),
             start_page: Some("/".into()),
-            traffic_graph: Some(true),
-            enable_memory_usage: Some(true),
             enable_group_icon: Some(true),
-            pause_render_traffic_stats_on_blur: Some(true),
             #[cfg(target_os = "macos")]
             tray_icon: Some("monochrome".into()),
             menu_icon: Some("monochrome".into()),
@@ -375,8 +362,6 @@ impl IVerge {
             webdav_url: None,
             webdav_username: None,
             webdav_password: None,
-            #[cfg(target_os = "macos")]
-            enable_tray_speed: Some(false),
             tray_proxy_groups_display_mode: Some("default".into()),
             tray_inline_outbound_modes: Some(false),
             enable_global_hotkey: Some(true),
@@ -413,10 +398,7 @@ impl IVerge {
         patch!(env_type);
         patch!(start_page);
         patch!(startup_script);
-        patch!(traffic_graph);
-        patch!(enable_memory_usage);
         patch!(enable_group_icon);
-        patch!(pause_render_traffic_stats_on_blur);
         #[cfg(target_os = "macos")]
         patch!(tray_icon);
         patch!(menu_icon);
@@ -477,8 +459,6 @@ impl IVerge {
         patch!(webdav_url);
         patch!(webdav_username);
         patch!(webdav_password);
-        #[cfg(target_os = "macos")]
-        patch!(enable_tray_speed);
         patch!(tray_proxy_groups_display_mode);
         patch!(tray_inline_outbound_modes);
         patch!(enable_auto_light_weight_mode);

@@ -141,38 +141,6 @@ export const LayoutViewer = forwardRef<DialogRef>((_, ref) => {
 
         <Item>
           <ListItemText
-            primary={t('settings.components.verge.layout.fields.trafficGraph')}
-          />
-          <GuardState
-            value={verge?.traffic_graph ?? true}
-            valueProps="checked"
-            onCatch={onError}
-            onFormat={onSwitchFormat}
-            onChange={(e) => onChangeData({ traffic_graph: e })}
-            onGuard={(e) => patchVerge({ traffic_graph: e })}
-          >
-            <Switch edge="end" />
-          </GuardState>
-        </Item>
-
-        <Item>
-          <ListItemText
-            primary={t('settings.components.verge.layout.fields.memoryUsage')}
-          />
-          <GuardState
-            value={verge?.enable_memory_usage ?? true}
-            valueProps="checked"
-            onCatch={onError}
-            onFormat={onSwitchFormat}
-            onChange={(e) => onChangeData({ enable_memory_usage: e })}
-            onGuard={(e) => patchVerge({ enable_memory_usage: e })}
-          >
-            <Switch edge="end" />
-          </GuardState>
-        </Item>
-
-        <Item>
-          <ListItemText
             primary={t(
               'settings.components.verge.layout.fields.proxyGroupIcon',
             )}
@@ -184,28 +152,6 @@ export const LayoutViewer = forwardRef<DialogRef>((_, ref) => {
             onFormat={onSwitchFormat}
             onChange={(e) => onChangeData({ enable_group_icon: e })}
             onGuard={(e) => patchVerge({ enable_group_icon: e })}
-          >
-            <Switch edge="end" />
-          </GuardState>
-        </Item>
-
-        <Item>
-          <ListItemText
-            primary={t(
-              'settings.components.verge.layout.fields.pauseRenderTrafficStatsOnBlur',
-            )}
-          />
-          <GuardState
-            value={verge?.pause_render_traffic_stats_on_blur ?? true}
-            valueProps="checked"
-            onCatch={onError}
-            onFormat={onSwitchFormat}
-            onChange={(e) =>
-              onChangeData({ pause_render_traffic_stats_on_blur: e })
-            }
-            onGuard={(e) =>
-              patchVerge({ pause_render_traffic_stats_on_blur: e })
-            }
           >
             <Switch edge="end" />
           </GuardState>
@@ -405,45 +351,6 @@ export const LayoutViewer = forwardRef<DialogRef>((_, ref) => {
             </GuardState>
           </Item>
         )}
-        {OS === 'macos' && (
-          <Item>
-            <ListItemText
-              primary={t(
-                'settings.components.verge.layout.fields.enableTraySpeed',
-              )}
-            />
-            <GuardState
-              value={verge?.enable_tray_speed ?? false}
-              valueProps="checked"
-              onCatch={onError}
-              onFormat={onSwitchFormat}
-              onChange={(e) => onChangeData({ enable_tray_speed: e })}
-              onGuard={(e) => patchVerge({ enable_tray_speed: e })}
-            >
-              <Switch edge="end" />
-            </GuardState>
-          </Item>
-        )}
-        {/* {OS === "macos" && (
-          <Item>
-            <ListItemText primary={t("settings.components.verge.layout.fields.enableTrayIcon")} />
-            <GuardState
-              value={
-                verge?.enable_tray_icon === false &&
-                verge?.enable_tray_speed === false
-                  ? true
-                  : (verge?.enable_tray_icon ?? true)
-              }
-              valueProps="checked"
-              onCatch={onError}
-              onFormat={onSwitchFormat}
-              onChange={(e) => onChangeData({ enable_tray_icon: e })}
-              onGuard={(e) => patchVerge({ enable_tray_icon: e })}
-            >
-              <Switch edge="end" />
-            </GuardState>
-          </Item>
-        )} */}
         <Item>
           <ListItemText
             primary={t(
