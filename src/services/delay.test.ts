@@ -7,7 +7,7 @@ vi.mock('tauri-plugin-mihomo-api', () => ({
 
 import type { ResolvedProxyMember } from '@/types/proxy-view'
 
-import delayManager from './delay'
+import delayManager, { DelayManager } from './delay'
 
 const node = (name: string) =>
   ({
@@ -57,5 +57,22 @@ describe('group delay completion', () => {
     expect(settles).toBe(1)
     expect(other).toBe(0)
     stop()
+  })
+})
+
+describe('delay cache retention', () => {
+  test('removes deleted nodes and rejects their late updates', () => {
+    const manager = new DelayManager()
+    manager.setDelay('keep', 'g', 10)
+    manager.setDelay('removed', 'g', 20)
+
+    manager.retainProxyGroups([
+      { name: 'g', members: [{ name: 'keep' }] },
+    ])
+
+    expect(manager.getDelay('keep', 'g')).toBe(10)
+    expect(manager.getDelay('removed', 'g')).toBe(-1)
+    manager.setDelay('removed', 'g', 30)
+    expect(manager.getDelay('removed', 'g')).toBe(-1)
   })
 })

@@ -14,6 +14,7 @@ import {
   getRuntimeState,
   getSystemProxy,
 } from '@/services/cmds'
+import delayManager from '@/services/delay'
 import { subscribeVergeEvents } from '@/services/events'
 import { revalidateQueries, useQuery } from '@/services/query-client'
 import { resolveDisplayedMixedPort } from '@/utils/mixed-port'
@@ -108,6 +109,14 @@ export const AppDataProvider = ({
     ...TQ_DEFAULTS,
   })
   const runningMode = runState?.mode
+
+  useEffect(() => {
+    if (!proxyView) return
+    const groups = proxyView.global
+      ? [...proxyView.groups, proxyView.global]
+      : proxyView.groups
+    delayManager.retainProxyGroups(groups, ['chain-mode'])
+  }, [proxyView])
 
   const { data: uptimeData } = useQuery({
     queryKey: ['appUptime'],

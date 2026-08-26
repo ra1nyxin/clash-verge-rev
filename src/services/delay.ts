@@ -27,9 +27,14 @@ export interface DelayUpdate {
 
 const CACHE_TTL = 30 * 60 * 1000
 
-class DelayManager {
+export class DelayManager {
   private cache = new Map<string, DelayUpdate>()
+  private cacheMembership = new Map<
+    string,
+    { group: string; name: string }
+  >()
   private urlMap = new Map<string, string>()
+  private retainedGroups: Set<string> | null = null
 
   private listenerMap = new Map<string, (update: DelayUpdate) => void>()
 
@@ -47,6 +52,44 @@ class DelayManager {
   private pendingGroupUpdates = new Set<string>()
   private itemFlushScheduled = false
   private groupFlushScheduled = false
+
+  retainProxyGroups(
+    groups: readonly {
+      name: string
+      members: readonly { name: string }[]
+    }[],
+    preservedGroups: readonly string[] = [],
+  ) {
+    const retained = new Set([
+      ...groups.map((group) => group.name),
+      ...preservedGroups,
+    ])
+    const membersByGroup = new Map(
+      groups.map((group) => [
+        group.name,
+        new Set(group.members.map((member) => member.name)),
+      ]),
+    )
+    this.retainedGroups = retained
+
+    for (const [key, membership] of this.cacheMembership) {
+      const retainedMembers = membersByGroup.get(membership.group)
+      const keep =
+        preservedGroups.includes(membership.group) ||
+        retainedMembers?.has(membership.name)
+      if (keep) continue
+      this.cacheMembership.delete(key)
+      this.cache.delete(key)
+      this.pendingItemUpdates.delete(key)
+    }
+    for (const group of this.urlMap.keys()) {
+      if (!retained.has(group)) this.urlMap.delete(group)
+    }
+    for (const group of this.groupSnapshots.keys()) {
+      if (!retained.has(group)) this.groupSnapshots.delete(group)
+    }
+    this.groupSetSnapshots.clear()
+  }
 
   private scheduleOnNextFrame(run: () => void): void {
     if (typeof window !== 'undefined') {
@@ -208,7 +251,10 @@ class DelayManager {
       updatedAt: Date.now(),
     }
 
-    this.cache.set(key, update)
+    if (!this.retainedGroups || this.retainedGroups.has(group)) {
+      this.cache.set(key, update)
+      this.cacheMembership.set(key, { group, name })
+    }
 
     const queue = this.pendingItemUpdates.get(key)
     if (queue) {
@@ -228,6 +274,7 @@ class DelayManager {
 
     if (Date.now() - entry.updatedAt > CACHE_TTL) {
       this.cache.delete(key)
+      this.cacheMembership.delete(key)
       return undefined
     }
 
