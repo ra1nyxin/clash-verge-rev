@@ -17,8 +17,10 @@ use std::{
 const MAX_OUTPUTS: usize = 1000;
 const MAX_OUTPUT_SIZE: usize = 1024 * 1024; // 1MB
 const MAX_JSON_SIZE: usize = 10 * 1024 * 1024; // 10MB
+const MAX_SCRIPT_SIZE: usize = 1024 * 1024; // 1MB
 const MAX_LOOP_ITERATIONS: u64 = 10_000_000;
 const SCRIPT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+const SCRIPT_WORKER_MEMORY_LIMIT: usize = 512 * 1024 * 1024;
 const SCRIPT_WORKER_ARG: &str = "--internal-script-worker";
 const MAX_WORKER_MESSAGE_SIZE: usize = MAX_JSON_SIZE * 2 + MAX_OUTPUT_SIZE;
 
@@ -48,7 +50,71 @@ fn read_pipe_limited(mut pipe: impl Read, limit: usize) -> Result<Vec<u8>> {
     Ok(bytes)
 }
 
+#[cfg(unix)]
+fn apply_script_worker_memory_limit(command: &mut Command) {
+    use std::os::unix::process::CommandExt as _;
+
+    // SAFETY: this closure only calls the async-signal-safe setrlimit between fork and exec.
+    unsafe {
+        command.pre_exec(|| {
+            let limit = libc::rlimit {
+                rlim_cur: SCRIPT_WORKER_MEMORY_LIMIT as libc::rlim_t,
+                rlim_max: SCRIPT_WORKER_MEMORY_LIMIT as libc::rlim_t,
+            };
+            if libc::setrlimit(libc::RLIMIT_AS, &raw const limit) != 0 {
+                return Err(std::io::Error::last_os_error());
+            }
+            Ok(())
+        });
+    }
+}
+
+#[cfg(not(unix))]
+fn apply_script_worker_memory_limit(_command: &mut Command) {}
+
+#[cfg(windows)]
+fn attach_script_worker_memory_limit(child: &std::process::Child) -> Result<std::os::windows::io::OwnedHandle> {
+    use std::os::windows::io::{AsRawHandle as _, FromRawHandle as _, OwnedHandle};
+    use windows_sys::Win32::{
+        Foundation::HANDLE,
+        System::JobObjects::{
+            AssignProcessToJobObject, CreateJobObjectW, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
+            JOB_OBJECT_LIMIT_PROCESS_MEMORY, JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JobObjectExtendedLimitInformation,
+            SetInformationJobObject,
+        },
+    };
+
+    // SAFETY: every returned handle is immediately owned, and all pointers refer to live values.
+    unsafe {
+        let raw_job: HANDLE = CreateJobObjectW(std::ptr::null(), std::ptr::null());
+        if raw_job.is_null() {
+            return Err(std::io::Error::last_os_error()).context("failed to create script worker job");
+        }
+        let job = OwnedHandle::from_raw_handle(raw_job);
+        let mut info: JOBOBJECT_EXTENDED_LIMIT_INFORMATION = std::mem::zeroed();
+        info.BasicLimitInformation.LimitFlags =
+            JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | JOB_OBJECT_LIMIT_PROCESS_MEMORY;
+        info.ProcessMemoryLimit = SCRIPT_WORKER_MEMORY_LIMIT;
+        if SetInformationJobObject(
+            job.as_raw_handle() as HANDLE,
+            JobObjectExtendedLimitInformation,
+            &mut info as *mut _ as *mut _,
+            std::mem::size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32,
+        ) == 0
+        {
+            return Err(std::io::Error::last_os_error()).context("failed to limit script worker memory");
+        }
+        if AssignProcessToJobObject(job.as_raw_handle() as HANDLE, child.as_raw_handle() as HANDLE) == 0 {
+            return Err(std::io::Error::last_os_error()).context("failed to assign script worker job");
+        }
+        Ok(job)
+    }
+}
+
 fn run_script_worker(script: String, config: Mapping, name: String) -> Result<(Mapping, Vec<(String, String)>)> {
+    if script.len() > MAX_SCRIPT_SIZE {
+        anyhow::bail!("script source exceeds {MAX_SCRIPT_SIZE} bytes");
+    }
     let request = serde_json::to_vec(&ScriptWorkerRequest { script, config, name })?;
     if request.len() > MAX_WORKER_MESSAGE_SIZE {
         anyhow::bail!("script worker request exceeds {MAX_WORKER_MESSAGE_SIZE} bytes");
@@ -65,12 +131,15 @@ fn run_script_worker(script: String, config: Mapping, name: String) -> Result<(M
         use std::os::windows::process::CommandExt as _;
         command.creation_flags(0x0800_0000);
     }
+    apply_script_worker_memory_limit(&mut command);
 
     let child = command.spawn().context("failed to start script worker")?;
     let mut child = scopeguard::guard(child, |mut child| {
         let _ = child.kill();
         let _ = child.wait();
     });
+    #[cfg(windows)]
+    let _worker_job = attach_script_worker_memory_limit(&child)?;
     child
         .stdin
         .take()
@@ -137,6 +206,9 @@ pub(crate) fn run_script_worker_if_requested() -> Option<ExitCode> {
 }
 
 fn use_script_sync(script: String, config: &Mapping, name: &String) -> Result<(Mapping, Vec<(String, String)>)> {
+    if script.len() > MAX_SCRIPT_SIZE {
+        anyhow::bail!("script source exceeds {MAX_SCRIPT_SIZE} bytes");
+    }
     let mut context = Context::default();
 
     context
@@ -374,4 +446,11 @@ fn test_memory_limits() {
     let result = use_script_sync(script.into(), config, &String::from(""));
     // 应该失败或被限制
     assert!(result.is_ok()); // 会被限制但不会 panic
+}
+
+#[test]
+fn oversized_script_is_rejected_before_engine_initialization() {
+    let script = String::from(std::string::String::from(" ").repeat(MAX_SCRIPT_SIZE + 1));
+    let result = use_script_sync(script, &Mapping::new(), &String::from(""));
+    assert!(result.is_err());
 }
