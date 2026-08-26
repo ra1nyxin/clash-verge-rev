@@ -566,7 +566,7 @@ FunctionEnd
     !endif
   ${EndIf}
 
-  ; Check if verge-mihomo-alpha.exe is running
+  ; Stop and remove the legacy Alpha core left by older installations
   !if "${INSTALLMODE}" == "currentUser"
     nsis_tauri_utils::FindProcessCurrentUser "verge-mihomo-alpha.exe"
   !else
@@ -574,13 +574,14 @@ FunctionEnd
   !endif
   Pop $R0
   ${If} $R0 = 0
-    DetailPrint "Kill verge-mihomo-alpha.exe..."
+    DetailPrint "Remove legacy verge-mihomo-alpha.exe..."
     !if "${INSTALLMODE}" == "currentUser"
       nsis_tauri_utils::KillProcessCurrentUser "verge-mihomo-alpha.exe"
     !else
       nsis_tauri_utils::KillProcess "verge-mihomo-alpha.exe"
     !endif
   ${EndIf}
+  Delete "$INSTDIR\verge-mihomo-alpha.exe"
 
   ; Check if verge-mihomo.exe is running
   !if "${INSTALLMODE}" == "currentUser"
@@ -1135,6 +1136,7 @@ Section Uninstall
 
   ; A failed core upgrade leaves the displaced binary behind; it is never user data.
   Delete "$INSTDIR\verge-mihomo.old"
+  Delete "$INSTDIR\verge-mihomo-alpha.exe"
   Delete "$INSTDIR\verge-mihomo-alpha.old"
 
   ; Delete app associations

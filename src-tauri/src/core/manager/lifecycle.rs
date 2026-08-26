@@ -1,5 +1,5 @@
 use super::{CoreManager, RunningMode};
-use crate::config::{Config, IVerge};
+use crate::config::Config;
 use crate::core::handle::Handle;
 use crate::core::manager::CLASH_LOGGER;
 use crate::core::proxy_control::{self, SysproxyFailure};
@@ -576,21 +576,6 @@ impl CoreManager {
             || self.apply_proxy_after_start(),
         )
         .await
-    }
-
-    pub async fn change_core(&self, clash_core: &String) -> Result<()> {
-        if !IVerge::VALID_CLASH_CORES.contains(&clash_core.as_str()) {
-            anyhow::bail!("invalid clash core: {clash_core}");
-        }
-
-        Config::verge().await.edit_draft(|d| {
-            d.clash_core = Some(clash_core.to_owned());
-        });
-        Config::verge().await.apply();
-
-        let verge_data = Config::verge().await.latest_arc();
-        verge_data.save_file().await?;
-        self.update_config_checked().await
     }
 
     async fn prepare_startup(&self) -> StartupDecision {

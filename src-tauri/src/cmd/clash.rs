@@ -48,39 +48,6 @@ pub async fn get_clash_mode() -> CmdResult<Option<String>> {
 }
 
 #[tauri::command]
-pub async fn change_clash_core(clash_core: String) -> CmdResult<Option<CommandFailure>> {
-    logging!(info, Type::Config, "changing core to {clash_core}");
-
-    match CoreManager::global().change_core(&clash_core).await {
-        Ok(_) => {
-            logging_error!(Type::Core, profiles_save_file_safe().await);
-
-            match CoreManager::global().restart_core().await {
-                Ok(_) => {
-                    logging!(info, Type::Core, "core changed and restarted to {clash_core}");
-                    handle::Handle::notice_message("config_core::change_success", clash_core);
-                    handle::Handle::refresh_clash();
-                    Ok(None)
-                }
-                Err(err) => {
-                    let failed = err.context("core changed but failed to restart");
-                    let error_msg: String = format!("{failed:#}").into();
-                    handle::Handle::notice_message("config_core::change_error", error_msg.clone());
-                    logging!(error, Type::Core, "{error_msg}");
-                    Ok(Some(proxy_aware_coded_error(&failed, "CORE_CHANGE_FAILED")))
-                }
-            }
-        }
-        Err(err) => {
-            let error_msg: String = format!("{err:#}").into();
-            logging!(error, Type::Core, "failed to change core: {error_msg}");
-            handle::Handle::notice_message("config_core::change_error", error_msg);
-            Ok(Some(proxy_aware_coded_error(&err, "CORE_CHANGE_FAILED")))
-        }
-    }
-}
-
-#[tauri::command]
 pub async fn start_core() -> CmdResult {
     let result = CoreManager::global()
         .start_core()

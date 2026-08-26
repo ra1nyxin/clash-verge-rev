@@ -202,10 +202,6 @@ export async function getEmbeddedServerPort() {
   return invoke<number>('get_embedded_server_port')
 }
 
-export async function changeClashCore(clashCore: string) {
-  return invoke<CommandFailure | null>('change_clash_core', { clashCore })
-}
-
 export async function restartCore() {
   return invoke<void>('restart_core')
 }
