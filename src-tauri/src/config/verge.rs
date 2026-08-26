@@ -308,6 +308,7 @@ impl IVerge {
 
     pub fn template() -> Self {
         Self {
+            app_log_level: Some("warn".into()),
             app_log_max_size: Some(128),
             app_log_max_count: Some(8),
             clash_core: Some("verge-mihomo".into()),
@@ -477,10 +478,10 @@ impl IVerge {
                 "info" => LevelFilter::Info,
                 "debug" => LevelFilter::Debug,
                 "trace" => LevelFilter::Trace,
-                _ => LevelFilter::Info,
+                _ => LevelFilter::Warn,
             }
         } else {
-            LevelFilter::Info
+            LevelFilter::Warn
         }
     }
 }

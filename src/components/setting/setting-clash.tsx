@@ -186,7 +186,7 @@ const SettingClash = ({ onError }: Props) => {
         }
       >
         <GuardState
-          value={logLevel === 'warn' ? 'warning' : (logLevel ?? 'info')}
+          value={logLevel === 'warn' ? 'warning' : (logLevel ?? 'warning')}
           onCatch={onError}
           onFormat={(e: any) => e.target.value}
           onChange={(e) => onChangeData({ 'log-level': e })}

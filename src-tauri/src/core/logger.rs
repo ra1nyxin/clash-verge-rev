@@ -39,7 +39,7 @@ impl Default for Logger {
         Self {
             handle: Arc::new(Mutex::new(None)),
             sidecar_file_writer: Arc::new(RwLock::new(None)),
-            log_level: Arc::new(RwLock::new(LevelFilter::Info)),
+            log_level: Arc::new(RwLock::new(LevelFilter::Warn)),
             log_max_size: AtomicU64::new(128),
             log_max_count: AtomicUsize::new(8),
         }
