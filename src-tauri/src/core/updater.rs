@@ -235,11 +235,7 @@ impl SilentUpdater {
         Self::show_update_splash(app_handle, &version);
 
         // `install()` may hang (#2558); on Windows NSIS can take over without returning.
-        let install_result = tokio::task::spawn_blocking({
-            let bytes = bytes.clone();
-            let update = update.clone();
-            move || update.install(&bytes)
-        });
+        let install_result = tokio::task::spawn_blocking(move || update.install(&bytes));
 
         let success = match tokio::time::timeout(std::time::Duration::from_secs(30), install_result).await {
             Ok(Ok(Ok(()))) => {
@@ -265,11 +261,14 @@ impl SilentUpdater {
             }
             Err(_) => {
                 logging!(
-                    warn,
+                    info,
                     Type::System,
-                    "Startup install timed out (30s), will retry next launch"
+                    "Startup installer did not return within 30s; assuming it took over"
                 );
-                false
+                // A running blocking task cannot be cancelled. Finish the handoff so the
+                // current process exits instead of retaining the installer bytes indefinitely.
+                Self::delete_cache();
+                true
             }
         };
 
