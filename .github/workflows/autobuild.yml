@@ -1,6 +1,12 @@
 name: Auto Build
 
-on: [push, workflow_dispatch]
+on:
+  push:
+    branches:
+      - dev
+      - main
+      - master
+  workflow_dispatch:
 
 permissions:
   contents: write
