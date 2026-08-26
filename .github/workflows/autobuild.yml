@@ -2,9 +2,11 @@ name: Auto Build
 
 on:
   workflow_dispatch:
-  schedule:
-    # UTC+8 12:00, 18:00 -> UTC 4:00, 10:00
-    - cron: '0 4,10 * * *'
+  push:
+    branches:
+      - dev
+      - main
+      - master
 permissions: write-all
 env:
   TAG_NAME: autobuild
@@ -22,7 +24,7 @@ jobs:
     uses: ./.github/workflows/check-commit-needs-build.yml
     with:
       tag_name: autobuild
-      force_build: ${{ github.event_name == 'workflow_dispatch' }}
+      force_build: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
 
   update_tag:
     name: Update tag
