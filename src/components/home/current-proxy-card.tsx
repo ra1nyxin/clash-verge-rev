@@ -65,8 +65,6 @@ import { compareByDelay, DEFAULT_DELAY_TIMEOUT } from '@/utils/delay'
 const STORAGE_KEY_GROUP = 'clash-verge-selected-proxy-group'
 const STORAGE_KEY_SORT_TYPE = 'clash-verge-proxy-sort-type'
 
-const AUTO_CHECK_DEFAULT_INTERVAL_MINUTES = 5
-const AUTO_CHECK_INITIAL_DELAY_MS = 100
 const PROXY_MENU_MAX_HEIGHT = 500
 
 interface ProxyOption {
@@ -423,16 +421,7 @@ export const CurrentProxyCard = () => {
   const { isCoreDataPending } = useCoreDataStatus()
   const { verge } = useVerge()
   const { current: currentProfile } = useProfiles()
-  const autoDelayEnabled = verge?.enable_auto_delay_detection ?? false
   const defaultLatencyTimeout = verge?.default_latency_timeout
-  const autoDelayIntervalMs = useMemo(() => {
-    const rawInterval = verge?.auto_delay_detection_interval_minutes
-    const intervalMinutes =
-      typeof rawInterval === 'number' && rawInterval > 0
-        ? rawInterval
-        : AUTO_CHECK_DEFAULT_INTERVAL_MINUTES
-    return Math.max(1, Math.round(intervalMinutes)) * 60 * 1000
-  }, [verge?.auto_delay_detection_interval_minutes])
   const currentProfileId = currentProfile?.uid || null
 
   const getProfileStorageKey = useCallback(
@@ -499,16 +488,6 @@ export const CurrentProxyCard = () => {
   const [openSelect, setOpenSelect] = useState<OpenSelect>(null)
   const delayButtonRef = useRef<HTMLButtonElement>(null)
   const delays = useGroupDelays(selectedGroupName || null)
-
-  const autoCheckInProgressRef = useRef(false)
-  const latestTimeoutRef = useRef<number>(
-    verge?.default_latency_timeout || 10000,
-  )
-  const latestProxyMemberRef = useRef<ResolvedProxyMember | null>(null)
-
-  useEffect(() => {
-    latestTimeoutRef.current = verge?.default_latency_timeout || 10000
-  }, [verge?.default_latency_timeout])
 
   const selectableGroups = useMemo(() => {
     if (!proxyView) return []
@@ -618,8 +597,6 @@ export const CurrentProxyCard = () => {
       : undefined
   }, [isDirectMode, proxyView, selectedGroup])
 
-  latestProxyMemberRef.current = currentOption?.member ?? null
-
   const handleGroupChange = useCallback(
     (event: SelectChangeEvent<string>) => {
       if (isGlobalMode || isDirectMode) return
@@ -674,79 +651,6 @@ export const CurrentProxyCard = () => {
           text: t('home.components.currentProxy.status.uninitialized'),
           color: 'text.secondary',
         }
-
-  const checkCurrentProxyDelay = useCallback(async () => {
-    if (autoCheckInProgressRef.current) return
-    if (isDirectMode) return
-
-    const groupName = selectedGroupName
-    const proxyName = selectedProxyName
-
-    if (!groupName || !proxyName) return
-
-    const proxyMember = latestProxyMemberRef.current
-    if (!proxyMember || !isInteractableMember(proxyMember)) {
-      debugLog(
-        `[CurrentProxyCard] 自动延迟检测跳过，组: ${groupName}, 节点: ${proxyName} 未找到`,
-      )
-      return
-    }
-
-    autoCheckInProgressRef.current = true
-
-    const timeout = latestTimeoutRef.current || 10000
-
-    try {
-      debugLog(
-        `[CurrentProxyCard] 自动检测当前节点延迟，组: ${groupName}, 节点: ${proxyName}`,
-      )
-      await delayManager.checkDelay(proxyMember, groupName, timeout)
-    } catch (error) {
-      console.error(
-        `[CurrentProxyCard] 自动检测当前节点延迟失败，组: ${groupName}, 节点: ${proxyName}`,
-        error,
-      )
-    } finally {
-      autoCheckInProgressRef.current = false
-      refreshProxy()
-    }
-  }, [isDirectMode, refreshProxy, selectedGroupName, selectedProxyName])
-
-  useEffect(() => {
-    if (isDirectMode) return
-    if (!autoDelayEnabled) return
-    if (!selectedGroupName || !selectedProxyName) return
-
-    let disposed = false
-    let intervalTimer: ReturnType<typeof setTimeout> | null = null
-    let initialTimer: ReturnType<typeof setTimeout> | null = null
-
-    const runAndSchedule = async () => {
-      if (disposed) return
-      await checkCurrentProxyDelay()
-      if (disposed) return
-      intervalTimer = setTimeout(runAndSchedule, autoDelayIntervalMs)
-    }
-
-    initialTimer = setTimeout(async () => {
-      await checkCurrentProxyDelay()
-      if (disposed) return
-      intervalTimer = setTimeout(runAndSchedule, autoDelayIntervalMs)
-    }, AUTO_CHECK_INITIAL_DELAY_MS)
-
-    return () => {
-      disposed = true
-      if (initialTimer) clearTimeout(initialTimer)
-      if (intervalTimer) clearTimeout(intervalTimer)
-    }
-  }, [
-    checkCurrentProxyDelay,
-    autoDelayIntervalMs,
-    isDirectMode,
-    selectedGroupName,
-    selectedProxyName,
-    autoDelayEnabled,
-  ])
 
   const handleSortTypeChange = useCallback(() => {
     const newSortType = ((sortType + 1) % 3) as ProxySortType

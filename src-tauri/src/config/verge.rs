@@ -106,11 +106,6 @@ pub struct IVerge {
 
     pub default_latency_timeout: Option<i16>,
 
-    pub enable_auto_delay_detection: Option<bool>,
-
-    /// 自动检测当前节点延迟的间隔（分钟）
-    pub auto_delay_detection_interval_minutes: Option<u64>,
-
     pub enable_builtin_enhanced: Option<bool>,
 
     pub proxy_layout_column: Option<u8>,
@@ -443,8 +438,6 @@ impl IVerge {
         patch!(auto_close_connection);
         patch!(default_latency_test);
         patch!(default_latency_timeout);
-        patch!(enable_auto_delay_detection);
-        patch!(auto_delay_detection_interval_minutes);
         patch!(enable_builtin_enhanced);
         patch!(proxy_layout_column);
         patch!(test_list);
