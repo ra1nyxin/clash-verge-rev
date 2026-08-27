@@ -18,9 +18,15 @@ import { BaseDialog, Switch } from '@/components/base'
 import { useProfiles } from '@/hooks/use-profiles'
 import { createProfile, patchProfile } from '@/services/cmds'
 import { showNotice } from '@/services/notice-service'
-import { version } from '@root/package.json'
 
 import { FileInput } from './file-input'
+import {
+  CUSTOM_USER_AGENT_PRESET_ID,
+  DEFAULT_USER_AGENT_PRESET_ID,
+  resolveUserAgentPresetId,
+  USER_AGENT_PRESETS,
+  type UserAgentPresetId,
+} from './user-agent-presets'
 
 interface Props {
   onChange: (isActivating?: boolean) => void
@@ -38,6 +44,8 @@ export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
   const [open, setOpen] = useState(false)
   const [openType, setOpenType] = useState<'new' | 'edit'>('new')
   const [loading, setLoading] = useState(false)
+  const [userAgentPresetId, setUserAgentPresetId] =
+    useState<UserAgentPresetId>(DEFAULT_USER_AGENT_PRESET_ID)
   const { profiles } = useProfiles()
 
   const fileDataRef = useRef<string | null>(null)
@@ -59,6 +67,8 @@ export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
 
   useImperativeHandle(ref, () => ({
     create: () => {
+      setUserAgentPresetId(DEFAULT_USER_AGENT_PRESET_ID)
+      setValue('option.user_agent', undefined)
       setOpenType('new')
       setOpen(true)
     },
@@ -67,6 +77,9 @@ export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
         Object.entries(item).forEach(([key, value]) => {
           setValue(key as any, value)
         })
+        setUserAgentPresetId(
+          resolveUserAgentPresetId(item.option?.user_agent),
+        )
       }
       setOpenType('edit')
       setOpen(true)
@@ -175,6 +188,7 @@ export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
         }
 
         setOpen(false)
+        setUserAgentPresetId(DEFAULT_USER_AGENT_PRESET_ID)
         setTimeout(() => reset(), 500)
         fileDataRef.current = null
 
@@ -192,6 +206,7 @@ export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
   const handleClose = () => {
     try {
       setOpen(false)
+      setUserAgentPresetId(DEFAULT_USER_AGENT_PRESET_ID)
       fileDataRef.current = null
       setTimeout(() => reset(), 500)
     } catch (e) {
@@ -296,18 +311,57 @@ export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
             )}
           />
 
-          <Controller
-            name="option.user_agent"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...text}
-                {...field}
-                placeholder={`clash-verge/v${version}`}
-                label={t('profiles.modals.profileForm.fields.userAgent')}
-              />
-            )}
-          />
+          <FormControl size="small" fullWidth sx={{ mt: 1, mb: 1 }}>
+            <InputLabel>
+              {t('profiles.modals.profileForm.fields.userAgent')}
+            </InputLabel>
+            <Select
+              value={userAgentPresetId}
+              label={t('profiles.modals.profileForm.fields.userAgent')}
+              onChange={(event) => {
+                const presetId = event.target.value as UserAgentPresetId
+                setUserAgentPresetId(presetId)
+
+                if (presetId === CUSTOM_USER_AGENT_PRESET_ID) {
+                  const currentUserAgent = getValues('option.user_agent')
+                  if (
+                    resolveUserAgentPresetId(currentUserAgent) !==
+                    CUSTOM_USER_AGENT_PRESET_ID
+                  ) {
+                    setValue('option.user_agent', '')
+                  }
+                  return
+                }
+
+                const preset = USER_AGENT_PRESETS.find(
+                  (item) => item.id === presetId,
+                )
+                setValue('option.user_agent', preset?.value)
+              }}
+            >
+              {USER_AGENT_PRESETS.map((preset) => (
+                <MenuItem key={preset.id} value={preset.id}>
+                  {t(preset.labelKey)}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          {userAgentPresetId === CUSTOM_USER_AGENT_PRESET_ID && (
+            <Controller
+              name="option.user_agent"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...text}
+                  {...field}
+                  label={t(
+                    'profiles.modals.profileForm.fields.customUserAgent',
+                  )}
+                />
+              )}
+            />
+          )}
 
           <Controller
             name="option.timeout_seconds"
