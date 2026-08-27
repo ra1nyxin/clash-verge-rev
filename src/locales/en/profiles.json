@@ -92,19 +92,6 @@
         "merge": "Merge",
         "script": "Script"
       }
-    },
-    "profileItem": {
-      "tooltips": {
-        "showLast": "Click to show last update time",
-        "showNext": "Click to show next update"
-      },
-      "status": {
-        "lastUpdateFailed": "Last Update failed",
-        "nextUp": "Next Up",
-        "noSchedule": "No schedule",
-        "unknown": "Unknown",
-        "autoUpdateDisabled": "Auto update disabled"
-      }
     }
   },
   "modals": {
@@ -119,11 +106,9 @@
         "subscriptionUrl": "Subscription URL",
         "userAgent": "User Agent",
         "httpTimeout": "HTTP Request Timeout",
-        "updateInterval": "Update Interval",
         "useSystemProxy": "Use System Proxy",
         "useClashProxy": "Use Clash Proxy",
-        "acceptInvalidCerts": "Allows Invalid Certificates (Danger)",
-        "allowAutoUpdate": "Allow Auto Update"
+        "acceptInvalidCerts": "Allows Invalid Certificates (Danger)"
       },
       "types": {
         "remote": "Remote",
@@ -134,9 +119,6 @@
         "urlRequired": "Enter a subscription URL",
         "uidMissing": "The profile identifier is missing",
         "saveFailed": "Failed to save profile"
-      },
-      "warnings": {
-        "frequentUpdate": "A short interval reloads the core that often and drops existing connections. {{minutes}} minutes (24 hours) is recommended."
       },
       "feedback": {
         "notifications": {

@@ -10,12 +10,9 @@ interface VergeEvents {
   'verge://refresh-proxy-config': null
   /** A backend message for the user: `[status, message]`. */
   'verge://notice-message': [string, string]
-  'verge://timer-updated': string
   'verge://run-state-changed': RunState
   'verge://pending-failures-changed': null
   'profile-changed': string
-  'profile-update-started': { uid?: string }
-  'profile-update-completed': { uid?: string }
   'verge://test-all': null
 }
 

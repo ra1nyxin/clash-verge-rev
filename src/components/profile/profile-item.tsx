@@ -20,14 +20,7 @@ import {
 } from '@mui/material'
 import { useLockFn } from 'ahooks'
 import dayjs from 'dayjs'
-import {
-  memo,
-  useCallback,
-  useEffect,
-  useReducer,
-  useRef,
-  useState,
-} from 'react'
+import { memo, useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { BaseDialog } from '@/components/base'
@@ -36,7 +29,6 @@ import { GroupsEditorViewer } from '@/components/profile/groups-editor-viewer'
 import { RulesEditorViewer } from '@/components/profile/rules-editor-viewer'
 import { useEditorDocument } from '@/hooks/use-editor-document'
 import {
-  getNextUpdateTime,
   readProfileFile,
   saveProfileFile,
   updateProfile,
@@ -45,7 +37,6 @@ import {
 import { showNotice } from '@/services/notice-service'
 import { useLoadingCache, useSetLoadingCache } from '@/services/states'
 import type { TranslationKey } from '@/types/generated/i18n-keys'
-import { debugLog } from '@/utils/debug'
 import { openExternalUrl } from '@/utils/open-external-url'
 import parseTraffic from '@/utils/parse-traffic'
 
@@ -69,8 +60,6 @@ export interface ProfileItemProps {
   batchMode?: boolean
   isSelected?: boolean
   onSelectionChange?: () => void
-  timerUpdateRevision: number
-  completedUpdateRevision: number
   dragHandleRef: (node: HTMLElement | null) => void
   dragHandleAttributes: DraggableAttributes
   dragHandleListeners: DraggableSyntheticListeners
@@ -89,8 +78,6 @@ const ProfileItemBase = (props: ProfileItemProps) => {
     batchMode,
     isSelected,
     onSelectionChange,
-    timerUpdateRevision,
-    completedUpdateRevision,
     dragHandleRef,
     dragHandleAttributes,
     dragHandleListeners,
@@ -102,12 +89,6 @@ const ProfileItemBase = (props: ProfileItemProps) => {
   const loadingCache = useLoadingCache()
   const setLoadingCache = useSetLoadingCache()
 
-  const [showNextUpdate, setShowNextUpdate] = useState(false)
-  const showNextUpdateRef = useRef(false)
-  const [nextUpdateTime, setNextUpdateTime] = useState('')
-  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined,
-  )
   const setLoading = useCallback(
     (loading: boolean) => {
       setLoadingCache((cache) => {
@@ -125,119 +106,6 @@ const ProfileItemBase = (props: ProfileItemProps) => {
 
   const { uid, name = 'Profile', extra, updated = 0, option } = itemData
 
-  const fetchNextUpdateTimeCallback = useCallback(
-    async (forceRefresh = false) => {
-      if (
-        itemData.option?.update_interval &&
-        itemData.option.update_interval > 0
-      ) {
-        try {
-          debugLog(`尝试获取配置 ${itemData.uid} 的下次更新时间`)
-
-          if (forceRefresh) {
-            debugLog(`强制刷新定时器任务`)
-          }
-
-          const nextUpdate = await getNextUpdateTime(itemData.uid)
-          debugLog(`获取到下次更新时间结果:`, nextUpdate)
-
-          if (nextUpdate) {
-            const nextUpdateDate = dayjs(nextUpdate * 1000)
-            const now = dayjs()
-
-            if (nextUpdateDate.isBefore(now)) {
-              setNextUpdateTime(
-                t('profiles.components.profileItem.status.lastUpdateFailed'),
-              )
-            } else {
-              const diffMinutes = nextUpdateDate.diff(now, 'minute')
-
-              if (diffMinutes < 60) {
-                if (diffMinutes <= 0) {
-                  setNextUpdateTime(
-                    `${t('profiles.components.profileItem.status.nextUp')} <1m`,
-                  )
-                } else {
-                  setNextUpdateTime(
-                    `${t('profiles.components.profileItem.status.nextUp')} ${diffMinutes}m`,
-                  )
-                }
-              } else {
-                const hours = Math.floor(diffMinutes / 60)
-                const mins = diffMinutes % 60
-                setNextUpdateTime(
-                  `${t('profiles.components.profileItem.status.nextUp')} ${hours}h ${mins}m`,
-                )
-              }
-            }
-          } else {
-            debugLog(`返回的下次更新时间为空`)
-            setNextUpdateTime(
-              t('profiles.components.profileItem.status.noSchedule'),
-            )
-          }
-        } catch (err) {
-          console.error(`获取下次更新时间出错:`, err)
-          setNextUpdateTime(t('profiles.components.profileItem.status.unknown'))
-        }
-      } else {
-        debugLog(`该配置未设置更新间隔或间隔为0`)
-        setNextUpdateTime(
-          t('profiles.components.profileItem.status.autoUpdateDisabled'),
-        )
-      }
-    },
-    [itemData.option?.update_interval, itemData.uid, t],
-  )
-  const fetchNextUpdateTime = useLockFn(fetchNextUpdateTimeCallback)
-
-  const toggleUpdateTimeDisplay = (e: React.MouseEvent) => {
-    e.stopPropagation()
-
-    if (!showNextUpdate) {
-      fetchNextUpdateTime()
-    }
-
-    setShowNextUpdate(!showNextUpdate)
-  }
-
-  useEffect(() => {
-    showNextUpdateRef.current = showNextUpdate
-  }, [showNextUpdate])
-
-  useEffect(() => {
-    if (showNextUpdate) {
-      fetchNextUpdateTime()
-    }
-  }, [
-    fetchNextUpdateTime,
-    showNextUpdate,
-    itemData.option?.update_interval,
-    updated,
-  ])
-
-  useEffect(() => {
-    if (timerUpdateRevision === 0 || !showNextUpdateRef.current) return
-
-    if (refreshTimeoutRef.current !== undefined) {
-      clearTimeout(refreshTimeoutRef.current)
-    }
-    refreshTimeoutRef.current = window.setTimeout(() => {
-      fetchNextUpdateTime(true)
-    }, 1000)
-
-    return () => {
-      if (refreshTimeoutRef.current !== undefined) {
-        clearTimeout(refreshTimeoutRef.current)
-      }
-    }
-  }, [fetchNextUpdateTime, timerUpdateRevision])
-
-  useEffect(() => {
-    if (completedUpdateRevision === 0 || !showNextUpdateRef.current) return
-    fetchNextUpdateTime()
-  }, [completedUpdateRevision, fetchNextUpdateTime])
-
   const hasUrl = !!itemData.url
   const hasExtra = !!extra // only subscription url has extra info
   const hasHome = !!itemData.home // only subscription url has home page
@@ -252,35 +120,6 @@ const ProfileItemBase = (props: ProfileItemProps) => {
   )
 
   const loading = loadingCache.has(itemData.uid)
-
-  const [, forceRefresh] = useReducer((value: number) => value + 1, 0)
-  useEffect(() => {
-    if (!hasUrl) return
-
-    let timer: ReturnType<typeof setTimeout> | undefined
-
-    const handler = () => {
-      const now = Date.now()
-      const lastUpdate = updated * 1000
-      if (now - lastUpdate >= 24 * 36e5) return
-
-      const wait = now - lastUpdate >= 36e5 ? 30e5 : 5e4
-
-      timer = setTimeout(() => {
-        forceRefresh()
-        handler()
-      }, wait)
-    }
-
-    handler()
-
-    return () => {
-      if (timer) {
-        clearTimeout(timer)
-        timer = undefined
-      }
-    }
-  }, [forceRefresh, hasUrl, updated])
 
   const [fileOpen, setFileOpen] = useState(false)
   const [rulesOpen, setRulesOpen] = useState(false)
@@ -770,30 +609,14 @@ const ProfileItemBase = (props: ProfileItemProps) => {
                   <Typography
                     noWrap
                     component="span"
-                    title={
-                      showNextUpdate
-                        ? t('profiles.components.profileItem.tooltips.showLast')
-                        : `${t('shared.labels.updateTime')}: ${parseExpire(updated)}\n${t('profiles.components.profileItem.tooltips.showNext')}`
-                    }
+                    title={`${t('shared.labels.updateTime')}: ${parseExpire(updated)}`}
                     sx={{
                       fontSize: 14,
                       textAlign: 'right',
-                      cursor: 'pointer',
                       display: 'inline-block',
-                      borderBottom: '1px dashed transparent',
-                      transition: 'all 0.2s',
-                      '&:hover': {
-                        borderBottomColor: 'primary.main',
-                        color: 'primary.main',
-                      },
                     }}
-                    onClick={toggleUpdateTimeDisplay}
                   >
-                    {showNextUpdate
-                      ? nextUpdateTime
-                      : updated > 0
-                        ? dayjs(updated * 1000).fromNow()
-                        : ''}
+                    {updated > 0 ? dayjs(updated * 1000).fromNow() : ''}
                   </Typography>
                 </Box>
               )}

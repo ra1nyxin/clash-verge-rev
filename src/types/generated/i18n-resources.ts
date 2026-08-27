@@ -295,19 +295,6 @@ export interface TranslationResources {
             script: string
           }
         }
-        profileItem: {
-          status: {
-            autoUpdateDisabled: string
-            lastUpdateFailed: string
-            nextUp: string
-            noSchedule: string
-            unknown: string
-          }
-          tooltips: {
-            showLast: string
-            showNext: string
-          }
-        }
       }
       modals: {
         confirmDelete: {
@@ -375,12 +362,10 @@ export interface TranslationResources {
           }
           fields: {
             acceptInvalidCerts: string
-            allowAutoUpdate: string
             description: string
             httpTimeout: string
             subscriptionUrl: string
             type: string
-            updateInterval: string
             useClashProxy: string
             userAgent: string
             useSystemProxy: string
@@ -392,9 +377,6 @@ export interface TranslationResources {
           types: {
             local: string
             remote: string
-          }
-          warnings: {
-            frequentUpdate: string
           }
         }
         proxiesEditor: {

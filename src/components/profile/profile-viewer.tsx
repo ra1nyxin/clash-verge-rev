@@ -33,9 +33,6 @@ export interface ProfileViewerRef {
 
 type ProfileViewerProps = Props & { ref?: Ref<ProfileViewerRef> }
 
-// 同后端 constants::profile::MIN_UPDATE_INTERVAL
-const MIN_UPDATE_INTERVAL = 1440
-
 export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
@@ -103,11 +100,6 @@ export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
           option.timeout_seconds = +option.timeout_seconds
         } else if (option) {
           option.timeout_seconds = undefined
-        }
-        if (option?.update_interval) {
-          option.update_interval = +option.update_interval
-        } else if (option) {
-          option.update_interval = undefined
         }
         if (option?.user_agent === '') {
           option.user_agent = undefined
@@ -338,44 +330,6 @@ export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
                 }}
               />
             )}
-          />
-          <Controller
-            name="option.update_interval"
-            control={control}
-            render={({ field }) => {
-              const interval = Number(field.value)
-              const tooFrequent =
-                Number.isFinite(interval) &&
-                interval > 0 &&
-                interval < MIN_UPDATE_INTERVAL
-
-              return (
-                <TextField
-                  {...text}
-                  {...field}
-                  type="number"
-                  label={t('profiles.modals.profileForm.fields.updateInterval')}
-                  helperText={
-                    tooFrequent
-                      ? t(
-                          'profiles.modals.profileForm.warnings.frequentUpdate',
-                          { minutes: MIN_UPDATE_INTERVAL },
-                        )
-                      : undefined
-                  }
-                  slotProps={{
-                    formHelperText: { sx: { color: 'warning.main' } },
-                    input: {
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          {t('shared.units.minutes')}
-                        </InputAdornment>
-                      ),
-                    },
-                  }}
-                />
-              )
-            }}
           />
           <Controller
             name="option.with_proxy"

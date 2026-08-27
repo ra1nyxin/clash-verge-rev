@@ -442,10 +442,6 @@ export const entry_lightweight_mode = async () => {
   return invoke<void>('entry_lightweight_mode')
 }
 
-export async function getNextUpdateTime(uid: string) {
-  return invoke<number | null>('get_next_update_time', { uid })
-}
-
 interface ToggleableProxyPort {
   enabled: boolean
   port: number

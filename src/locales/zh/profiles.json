@@ -92,19 +92,6 @@
         "merge": "Merge",
         "script": "Script"
       }
-    },
-    "profileItem": {
-      "tooltips": {
-        "showLast": "点击查看上次更新时间",
-        "showNext": "点击查看下一次更新"
-      },
-      "status": {
-        "lastUpdateFailed": "上次更新失败",
-        "nextUp": "下次更新",
-        "noSchedule": "没有计划",
-        "unknown": "未知",
-        "autoUpdateDisabled": "自动更新已禁用"
-      }
     }
   },
   "modals": {
@@ -119,11 +106,9 @@
         "subscriptionUrl": "订阅链接",
         "userAgent": "用户代理",
         "httpTimeout": "HTTP 请求超时",
-        "updateInterval": "更新间隔",
         "useSystemProxy": "使用系统代理更新",
         "useClashProxy": "使用内核代理更新",
-        "acceptInvalidCerts": "允许无效证书（危险）",
-        "allowAutoUpdate": "允许自动更新"
+        "acceptInvalidCerts": "允许无效证书（危险）"
       },
       "types": {
         "remote": "远程",
@@ -134,9 +119,6 @@
         "urlRequired": "请输入订阅链接",
         "uidMissing": "缺少订阅标识",
         "saveFailed": "保存订阅失败"
-      },
-      "warnings": {
-        "frequentUpdate": "间隔过短会频繁触发内核重载并中断现有连接，建议使用默认值 {{minutes}} 分钟（24 小时）"
       },
       "feedback": {
         "notifications": {

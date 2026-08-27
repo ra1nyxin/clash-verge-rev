@@ -23,15 +23,6 @@ pub enum FrontendEvent<'a> {
     ProfileChanged {
         current_profile_id: &'a String,
     },
-    TimerUpdated {
-        profile_index: &'a String,
-    },
-    ProfileUpdateStarted {
-        uid: &'a String,
-    },
-    ProfileUpdateCompleted {
-        uid: &'a String,
-    },
     RunStateChanged {
         state: serde_json::Value,
     },
@@ -286,9 +277,6 @@ impl NotificationSystem {
                 ("verge://notice-message", serde_json::to_value((status, message)))
             }
             FrontendEvent::ProfileChanged { current_profile_id } => ("profile-changed", Ok(json!(current_profile_id))),
-            FrontendEvent::TimerUpdated { profile_index } => ("verge://timer-updated", Ok(json!(profile_index))),
-            FrontendEvent::ProfileUpdateStarted { uid } => ("profile-update-started", Ok(json!({ "uid": uid }))),
-            FrontendEvent::ProfileUpdateCompleted { uid } => ("profile-update-completed", Ok(json!({ "uid": uid }))),
             FrontendEvent::RunStateChanged { state } => ("verge://run-state-changed", Ok(state)),
             FrontendEvent::PendingFailuresChanged => ("verge://pending-failures-changed", Ok(serde_json::Value::Null)),
             #[cfg(target_os = "linux")]

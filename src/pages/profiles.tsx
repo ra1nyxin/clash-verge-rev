@@ -61,7 +61,6 @@ import {
   reorderProfile,
   updateProfile,
 } from '@/services/cmds'
-import { subscribeVergeEvents } from '@/services/events'
 import { errorDetail, showNotice } from '@/services/notice-service'
 import {
   fetchCacheData,
@@ -144,13 +143,6 @@ const ProfilePage = () => {
     string | null
   >(null)
   const [loading, setLoading] = useState(false)
-  const [timerUpdateRevisions, setTimerUpdateRevisions] = useState<
-    Map<string, number>
-  >(() => new Map())
-  const [completedUpdateRevisions, setCompletedUpdateRevisions] = useState<
-    Map<string, number>
-  >(() => new Map())
-
   const [batchMode, setBatchMode] = useState(false)
   const [selectedProfiles, setSelectedProfiles] = useState<Set<string>>(
     () => new Set(),
@@ -575,33 +567,6 @@ const ProfilePage = () => {
     [setLoadingCache],
   )
 
-  useEffect(
-    () =>
-      subscribeVergeEvents({
-        'profile-update-started': ({ uid }) => {
-          if (uid) setLoadingProfiles([uid], true)
-        },
-        'profile-update-completed': ({ uid }) => {
-          if (!uid) return
-          setLoadingProfiles([uid], false)
-          setCompletedUpdateRevisions((current) => {
-            const next = new Map(current)
-            next.set(uid, (next.get(uid) ?? 0) + 1)
-            return next
-          })
-          void mutateProfiles()
-        },
-        'verge://timer-updated': (uid) => {
-          setTimerUpdateRevisions((current) => {
-            const next = new Map(current)
-            next.set(uid, (next.get(uid) ?? 0) + 1)
-            return next
-          })
-        },
-      }),
-    [mutateProfiles, setLoadingProfiles],
-  )
-
   const runProfileUpdates = useCallback(
     async (uids: string[]) => {
       if (uids.length === 0) return
@@ -964,12 +929,6 @@ const ProfilePage = () => {
                         visibleSwitchingProfile === item.uid
                       }
                       itemData={item}
-                      timerUpdateRevision={
-                        timerUpdateRevisions.get(item.uid) ?? 0
-                      }
-                      completedUpdateRevision={
-                        completedUpdateRevisions.get(item.uid) ?? 0
-                      }
                       mutateProfiles={mutateProfiles}
                       onSelect={(f) => onSelect(item.uid, f)}
                       onEdit={() => viewerRef.current?.edit(item)}

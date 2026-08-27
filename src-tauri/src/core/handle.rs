@@ -68,18 +68,6 @@ impl Handle {
         });
     }
 
-    pub fn notify_timer_updated(profile_index: &String) {
-        Self::send_event(FrontendEvent::TimerUpdated { profile_index });
-    }
-
-    pub fn notify_profile_update_started(uid: &String) {
-        Self::send_event(FrontendEvent::ProfileUpdateStarted { uid });
-    }
-
-    pub fn notify_profile_update_completed(uid: &String) {
-        Self::send_event(FrontendEvent::ProfileUpdateCompleted { uid });
-    }
-
     pub fn notice_message<S: AsRef<str>, M: Into<String>>(status: S, msg: M) {
         let status_str = status.as_ref();
         let msg_str = msg.into();
