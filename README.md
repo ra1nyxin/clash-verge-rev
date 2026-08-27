@@ -1,5 +1,4 @@
 <h1 align="center">
-  <img src="./src-tauri/icons/icon.png" alt="Clash Verge Rev" width="128" />
   <br>
   Clash Verge Rev
 </h1>

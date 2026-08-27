@@ -13,7 +13,6 @@
       },
       "nsis": {
         "displayLanguageSelector": true,
-        "installerIcon": "icons/icon.ico",
         "languages": ["SimpChinese", "English", "Russian"],
         "installMode": "perMachine",
         "template": "./packages/windows/installer.nsi"
