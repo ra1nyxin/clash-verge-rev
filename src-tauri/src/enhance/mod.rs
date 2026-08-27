@@ -643,6 +643,31 @@ fn cleanup_proxy_groups(mut config: Mapping) -> Mapping {
     config
 }
 
+fn disable_provider_background_network(mut config: Mapping) -> Mapping {
+    for section in ["proxy-providers", "rule-providers"] {
+        let Some(providers) = config.get_mut(section).and_then(Value::as_mapping_mut) else {
+            continue;
+        };
+
+        for provider in providers.values_mut().filter_map(Value::as_mapping_mut) {
+            if provider.get("type").and_then(Value::as_str) == Some("http") {
+                provider.insert("interval".into(), 0.into());
+            }
+
+            if section == "proxy-providers" {
+                let health_check = provider
+                    .entry("health-check".into())
+                    .or_insert_with(|| Value::Mapping(Mapping::new()));
+                if let Some(health_check) = health_check.as_mapping_mut() {
+                    health_check.insert("enable".into(), false.into());
+                }
+            }
+        }
+    }
+
+    config
+}
+
 /// 当 DNS 处于 fake-ip 模式且启用 IPv6 时，补充缺失的 `fake-ip-range6`，
 /// 否则 AAAA 查询无法获得 fake-ip，导致 IPv6 解析失败（见 issue #7373）。
 /// 兼容旧版本生成的、缺少该字段的 dns_config.yaml。
@@ -771,6 +796,7 @@ pub async fn enhance(profiles: &IProfiles) -> Result<(Mapping, HashSet<String>, 
     let config = ensure_lan_bind_address(config);
 
     let config = cleanup_proxy_groups(config);
+    let config = disable_provider_background_network(config);
     let config = use_sort(config);
 
     let mut exists_keys_set = HashSet::new();
@@ -1242,8 +1268,8 @@ mod authoritative_field_tests {
 #[cfg(test)]
 mod tests {
     use super::{
-        ChainItem, ChainType, cleanup_proxy_groups, ensure_lan_bind_address, process_global_items,
-        process_profile_items, use_keys,
+        ChainItem, ChainType, cleanup_proxy_groups, disable_provider_background_network,
+        ensure_lan_bind_address, process_global_items, process_profile_items, use_keys,
     };
     use std::collections::HashMap;
 
@@ -1481,6 +1507,58 @@ mod tests {
         assert!(snapshot.contains_key("mixed-port"));
         assert!(!snapshot.contains_key("secret"));
         assert!(!snapshot.contains_key("allow-lan"));
+    }
+
+    #[test]
+    fn provider_background_requests_are_disabled_only_in_runtime_config() {
+        let config = mapping(
+            r#"
+proxy-providers:
+  remote:
+    type: http
+    url: https://example.com/proxies.yaml
+    interval: 3600
+    health-check: {enable: true, interval: 300}
+  local:
+    type: file
+    path: ./local.yaml
+rule-providers:
+  remote:
+    type: http
+    url: https://example.com/rules.yaml
+    interval: 86400
+"#,
+        );
+
+        let result = disable_provider_background_network(config);
+        let proxy_providers = result
+            .get("proxy-providers")
+            .and_then(serde_yaml_ng::Value::as_mapping)
+            .expect("proxy providers should remain a mapping");
+        let remote_proxy = proxy_providers
+            .get("remote")
+            .and_then(serde_yaml_ng::Value::as_mapping)
+            .expect("remote proxy provider should remain a mapping");
+        assert_eq!(remote_proxy.get("interval").and_then(serde_yaml_ng::Value::as_u64), Some(0));
+        let health_check = remote_proxy
+            .get("health-check")
+            .and_then(serde_yaml_ng::Value::as_mapping)
+            .expect("health check should remain a mapping");
+        assert_eq!(health_check.get("enable").and_then(serde_yaml_ng::Value::as_bool), Some(false));
+        assert_eq!(health_check.get("interval").and_then(serde_yaml_ng::Value::as_u64), Some(300));
+        assert!(
+            proxy_providers
+                .get("local")
+                .and_then(serde_yaml_ng::Value::as_mapping)
+                .is_some_and(|provider| !provider.contains_key("interval"))
+        );
+        let remote_rules = result
+            .get("rule-providers")
+            .and_then(serde_yaml_ng::Value::as_mapping)
+            .and_then(|providers| providers.get("remote"))
+            .and_then(serde_yaml_ng::Value::as_mapping)
+            .expect("remote rule provider should remain a mapping");
+        assert_eq!(remote_rules.get("interval").and_then(serde_yaml_ng::Value::as_u64), Some(0));
     }
 
     #[test]
