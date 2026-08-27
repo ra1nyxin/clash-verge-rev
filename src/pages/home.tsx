@@ -40,10 +40,6 @@ const preloadTestCard = () =>
   import('@/components/home/test-card').then((module) => ({
     default: module.TestCard,
   }))
-const preloadIpInfoCard = () =>
-  import('@/components/home/ip-info-card').then((module) => ({
-    default: module.IpInfoCard,
-  }))
 const preloadClashInfoCard = () =>
   import('@/components/home/clash-info-card').then((module) => ({
     default: module.ClashInfoCard,
@@ -54,7 +50,6 @@ const preloadSystemInfoCard = () =>
   }))
 
 const LazyTestCard = lazy(preloadTestCard)
-const LazyIpInfoCard = lazy(preloadIpInfoCard)
 const LazyClashInfoCard = lazy(preloadClashInfoCard)
 const LazySystemInfoCard = lazy(preloadSystemInfoCard)
 
@@ -63,7 +58,6 @@ const LazySystemInfoCard = lazy(preloadSystemInfoCard)
 export const preloadHomePageCards = () =>
   Promise.all([
     preloadTestCard().catch(() => {}),
-    preloadIpInfoCard().catch(() => {}),
     preloadClashInfoCard().catch(() => {}),
     preloadSystemInfoCard().catch(() => {}),
   ])
@@ -78,7 +72,6 @@ interface HomeCardsSettings {
   clashinfo: boolean
   systeminfo: boolean
   test: boolean
-  ip: boolean
   [key: string]: boolean
 }
 
@@ -91,7 +84,6 @@ const DEFAULT_HOME_CARDS: HomeCardsSettings = {
   clashinfo: true,
   systeminfo: true,
   test: true,
-  ip: true,
 }
 
 const serializeCardFlags = (cards: HomeCardsSettings) =>
@@ -180,15 +172,6 @@ const HomeSettingsDialog = ({
           <FormControlLabel
             control={
               <Checkbox
-                checked={cards.ip || false}
-                onChange={() => handleToggle('ip')}
-              />
-            }
-            label={t('home.page.settings.cards.ip')}
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
                 checked={cards.clashinfo || false}
                 onChange={() => handleToggle('clashinfo')}
               />
@@ -272,12 +255,6 @@ const HomePage = () => {
         'test',
         <Suspense fallback={<Skeleton variant="rectangular" height={200} />}>
           <LazyTestCard />
-        </Suspense>,
-      ),
-      renderCard(
-        'ip',
-        <Suspense fallback={<Skeleton variant="rectangular" height={200} />}>
-          <LazyIpInfoCard />
         </Suspense>,
       ),
       renderCard(

@@ -89,24 +89,6 @@ export interface TranslationResources {
           }
           title: string
         }
-        ipInfo: {
-          errors: {
-            load: string
-            loadWithDetails: string
-            noServices: string
-          }
-          labels: {
-            asn: string
-            autoRefresh: string
-            ip: string
-            isp: string
-            location: string
-            org: string
-            timezone: string
-            unknown: string
-          }
-          title: string
-        }
         proxyTun: {
           status: {
             systemProxyDisabled: string
@@ -174,7 +156,6 @@ export interface TranslationResources {
           cards: {
             clashInfo: string
             currentProxy: string
-            ip: string
             network: string
             profile: string
             proxyMode: string
