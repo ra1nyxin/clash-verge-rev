@@ -1,6 +1,6 @@
 use crate::{
     config::Config,
-    core::{timer::Timer, tray::Tray},
+    core::tray::Tray,
     process::AsyncHandler,
 };
 
@@ -92,10 +92,6 @@ pub async fn auto_lightweight_boot() -> Result<()> {
 }
 
 pub async fn enable_auto_light_weight_mode() {
-    if let Err(e) = Timer::global().init().await {
-        logging!(error, Type::Lightweight, "Failed to initialize timer: {e}");
-        return;
-    }
     logging!(info, Type::Lightweight, "开启自动轻量模式");
     setup_window_close_listener();
     setup_webview_focus_listener();

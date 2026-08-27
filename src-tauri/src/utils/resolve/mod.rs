@@ -5,7 +5,7 @@ use anyhow::Result;
 use crate::{
     config::Config,
     core::{
-        CoreManager, Timer,
+        CoreManager,
         handle::Handle,
         hotkey::Hotkey,
         logger::Logger,
@@ -49,9 +49,6 @@ pub(crate) fn resolve_setup_async() {
     AsyncHandler::spawn(|| async {
         logging!(info, Type::ClashVergeRev, "Version: {}", env!("CARGO_PKG_VERSION"));
 
-        // Migrate before windows or timers can change the loaded config.
-        logging_error!(Type::Setup, init::migrate_short_update_intervals().await);
-
         #[cfg(target_os = "macos")]
         resolve_dock_show().await;
         init_startup_script().await;
@@ -75,7 +72,6 @@ pub(crate) fn resolve_setup_async() {
         let _ = futures::join!(
             core_init,
             init_tray(),
-            init_timer(),
             init_hotkey(),
             init_auto_lightweight_boot(),
             init_auto_backup(),
@@ -137,10 +133,6 @@ async fn init_resources() {
 
 async fn init_startup_script() {
     logging_error!(Type::Setup, init::startup_script().await);
-}
-
-async fn init_timer() {
-    logging_error!(Type::Setup, Timer::global().init().await);
 }
 
 async fn init_hotkey() {

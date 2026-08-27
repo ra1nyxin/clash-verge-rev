@@ -11,12 +11,12 @@ use crate::{
         },
         profiles_append_item_safe,
     },
-    core::{CoreManager, handle, timer::Timer, tray::Tray, validate::ValidationOutcome},
+    core::{CoreManager, handle, tray::Tray, validate::ValidationOutcome},
     feat,
     utils::{dirs, help},
 };
 use clash_verge_draft::{Draft, SharedDraft};
-use clash_verge_logging::{Type, logging, logging_error};
+use clash_verge_logging::{Type, logging};
 use scopeguard::defer;
 use smartstring::alias::String;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -88,8 +88,6 @@ pub async fn import_profile(url: std::string::String, option: Option<PrfOption>)
         return Err(coded_error("PROFILE_IMPORT_FAILED", e));
     }
     logging!(info, Type::Cmd, "[导入订阅] 配置文件保存成功");
-    logging_error!(Type::Timer, Timer::global().refresh().await);
-
     if let Some(uid) = &item.uid {
         logging!(info, Type::Cmd, "[导入订阅] 发送配置变更通知: {}", uid);
         handle::Handle::notify_profile_changed(uid);
@@ -120,7 +118,6 @@ pub async fn create_profile(item: PrfItem, file_data: Option<String>) -> CmdResu
             profiles_save_file_safe()
                 .await
                 .with_error_code("PROFILE_CREATE_FAILED")?;
-            logging_error!(Type::Timer, Timer::global().refresh().await);
             if let Some(uid) = &item.uid {
                 logging!(info, Type::Cmd, "[创建订阅] 发送配置变更通知: {}", uid);
                 handle::Handle::notify_profile_changed(uid);
@@ -196,7 +193,6 @@ pub async fn delete_profile(index: String) -> CmdResult {
             handle::Handle::notify_profile_changed(current);
         }
     }
-    logging_error!(Type::Timer, Timer::global().refresh().await);
     Ok(())
 }
 
@@ -350,18 +346,6 @@ pub async fn patch_profiles_config_by_profile_index(profile_index: String) -> Cm
 #[tauri::command]
 pub async fn patch_profile(index: String, profile: PrfItem) -> CmdResult {
     let profiles = Config::profiles().await;
-    let should_refresh_timer = if let Ok(old_profile) = profiles.latest_arc().get_item(&index)
-        && let Some(new_option) = profile.option.as_ref()
-    {
-        let old_interval = old_profile.option.as_ref().and_then(|o| o.update_interval);
-        let new_interval = new_option.update_interval;
-        let old_allow_auto_update = old_profile.option.as_ref().and_then(|o| o.allow_auto_update);
-        let new_allow_auto_update = new_option.allow_auto_update;
-        (old_interval != new_interval) || (old_allow_auto_update != new_allow_auto_update)
-    } else {
-        false
-    };
-
     // Prevent an in-flight restore from overwriting a newer UI or chain selection.
     let records_a_selection = profile.selected.is_some();
 
@@ -371,17 +355,6 @@ pub async fn patch_profile(index: String, profile: PrfItem) -> CmdResult {
 
     if records_a_selection {
         profiles::supersede_selected_activation();
-    }
-
-    if should_refresh_timer {
-        crate::process::AsyncHandler::spawn(move || async move {
-            logging!(info, Type::Timer, "Timer update settings changed, refreshing timer...");
-            if let Err(e) = crate::core::Timer::global().refresh().await {
-                logging!(error, Type::Timer, "Failed to refresh timer: {}", e);
-            } else {
-                crate::core::handle::Handle::notify_timer_updated(&index);
-            }
-        });
     }
 
     Ok(())
@@ -444,13 +417,6 @@ pub async fn read_profile_file(index: String) -> CmdResult<String> {
 
     let data = item.read_file().await.with_error_code("PROFILE_READ_FAILED")?;
     Ok(data)
-}
-
-#[tauri::command]
-pub async fn get_next_update_time(uid: String) -> CmdResult<Option<i64>> {
-    let timer = Timer::global();
-    let next_time = timer.get_next_update_time(&uid).await;
-    Ok(next_time)
 }
 
 #[cfg(test)]

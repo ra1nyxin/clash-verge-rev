@@ -24,8 +24,6 @@ pub static PORTABLE_FLAG: OnceCell<bool> = OnceCell::new();
 pub static CLASH_CONFIG: &str = "config.yaml";
 pub static VERGE_CONFIG: &str = "verge.yaml";
 pub static PROFILE_YAML: &str = "profiles.yaml";
-/// Marks that the one-shot raise of too-short auto-update intervals has already run.
-pub static UPDATE_INTERVAL_MIGRATED: &str = ".update-interval-migrated";
 
 pub fn init_portable_flag() -> Result<()> {
     use tauri::utils::platform::current_exe;
@@ -162,10 +160,6 @@ pub fn verge_path() -> Result<PathBuf> {
 
 pub fn profiles_path() -> Result<PathBuf> {
     Ok(app_home_dir()?.join(PROFILE_YAML))
-}
-
-pub fn update_interval_migrated_path() -> Result<PathBuf> {
-    Ok(app_home_dir()?.join(UPDATE_INTERVAL_MIGRATED))
 }
 
 #[cfg(target_os = "macos")]
