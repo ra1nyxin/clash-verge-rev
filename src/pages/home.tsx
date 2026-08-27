@@ -44,14 +44,8 @@ const preloadClashInfoCard = () =>
   import('@/components/home/clash-info-card').then((module) => ({
     default: module.ClashInfoCard,
   }))
-const preloadSystemInfoCard = () =>
-  import('@/components/home/system-info-card').then((module) => ({
-    default: module.SystemInfoCard,
-  }))
-
 const LazyTestCard = lazy(preloadTestCard)
 const LazyClashInfoCard = lazy(preloadClashInfoCard)
-const LazySystemInfoCard = lazy(preloadSystemInfoCard)
 
 // Used by bootstrap to initiate optional card imports without blocking render.
 // eslint-disable-next-line react-refresh/only-export-components
@@ -59,7 +53,6 @@ export const preloadHomePageCards = () =>
   Promise.all([
     preloadTestCard().catch(() => {}),
     preloadClashInfoCard().catch(() => {}),
-    preloadSystemInfoCard().catch(() => {}),
   ])
 
 // 定义首页卡片设置接口
@@ -70,7 +63,6 @@ interface HomeCardsSettings {
   mode: boolean
   info: boolean
   clashinfo: boolean
-  systeminfo: boolean
   test: boolean
   [key: string]: boolean
 }
@@ -82,7 +74,6 @@ const DEFAULT_HOME_CARDS: HomeCardsSettings = {
   network: true,
   mode: true,
   clashinfo: true,
-  systeminfo: true,
   test: true,
 }
 
@@ -178,15 +169,6 @@ const HomeSettingsDialog = ({
             }
             label={t('home.page.settings.cards.clashInfo')}
           />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={cards.systeminfo || false}
-                onChange={() => handleToggle('systeminfo')}
-              />
-            }
-            label={t('home.page.settings.cards.systemInfo')}
-          />
         </FormGroup>
       </DialogContent>
       <DialogActions>
@@ -261,12 +243,6 @@ const HomePage = () => {
         'clashinfo',
         <Suspense fallback={<Skeleton variant="rectangular" height={200} />}>
           <LazyClashInfoCard />
-        </Suspense>,
-      ),
-      renderCard(
-        'systeminfo',
-        <Suspense fallback={<Skeleton variant="rectangular" height={200} />}>
-          <LazySystemInfoCard />
         </Suspense>,
       ),
     ],
