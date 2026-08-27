@@ -247,7 +247,7 @@ pub async fn hide() {
         .await
         .data_arc()
         .enable_auto_light_weight_mode
-        .unwrap_or(false);
+        .unwrap_or(true);
 
     if enable_auto_light_weight_mode {
         add_light_weight_timer().await;

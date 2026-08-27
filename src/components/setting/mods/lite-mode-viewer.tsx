@@ -22,7 +22,7 @@ export function LiteModeViewer({ ref }: { ref?: Ref<DialogRef> }) {
 
   const [open, setOpen] = useState(false)
   const [values, setValues] = useState({
-    autoEnterLiteMode: false,
+    autoEnterLiteMode: true,
     autoEnterLiteModeDelay: 10, // 默认10分钟
   })
 
@@ -30,7 +30,7 @@ export function LiteModeViewer({ ref }: { ref?: Ref<DialogRef> }) {
     open: () => {
       setOpen(true)
       setValues({
-        autoEnterLiteMode: verge?.enable_auto_light_weight_mode ?? false,
+        autoEnterLiteMode: verge?.enable_auto_light_weight_mode ?? true,
         autoEnterLiteModeDelay: verge?.auto_light_weight_minutes ?? 10,
       })
     },

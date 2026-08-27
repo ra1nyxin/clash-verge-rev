@@ -365,7 +365,7 @@ impl IVerge {
             tray_proxy_groups_display_mode: Some("default".into()),
             tray_inline_outbound_modes: Some(false),
             enable_global_hotkey: Some(true),
-            enable_auto_light_weight_mode: Some(false),
+            enable_auto_light_weight_mode: Some(true),
             auto_light_weight_minutes: Some(10),
             enable_dns_settings: Some(false),
             home_cards: None,
