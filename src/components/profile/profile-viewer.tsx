@@ -55,7 +55,7 @@ export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
         option: {
           with_proxy: false,
           self_proxy: false,
-          allow_auto_update: true,
+          allow_auto_update: false,
         },
       },
     })
@@ -416,22 +416,6 @@ export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
             )}
           />
 
-          <Controller
-            name="option.allow_auto_update"
-            control={control}
-            render={({ field }) => (
-              <StyledBox>
-                <InputLabel>
-                  {t('profiles.modals.profileForm.fields.allowAutoUpdate')}
-                </InputLabel>
-                <Switch
-                  checked={field.value ?? true}
-                  {...field}
-                  color="primary"
-                />
-              </StyledBox>
-            )}
-          />
         </>
       )}
     </BaseDialog>

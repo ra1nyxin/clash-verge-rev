@@ -106,16 +106,17 @@ impl IProfiles {
         match help::read_yaml::<Self>(&path).await {
             Ok(mut profiles) => {
                 let items = profiles.items.get_or_insert_with(Vec::new);
-                let mut home_changed = false;
+                let mut profiles_changed = false;
                 for item in items.iter_mut() {
                     if item.uid.is_none() {
                         item.uid = Some(help::get_uid("d").into());
                     }
                     if item.itype.as_deref() == Some("remote") {
-                        item.option
-                            .get_or_insert_with(PrfOption::default)
-                            .allow_auto_update
-                            .get_or_insert(true);
+                        let option = item.option.get_or_insert_with(PrfOption::default);
+                        if option.allow_auto_update != Some(false) {
+                            option.allow_auto_update = Some(false);
+                            profiles_changed = true;
+                        }
                     }
 
                     if item
@@ -124,11 +125,11 @@ impl IProfiles {
                         .is_some_and(|home| normalize_profile_home_url(home).is_none())
                     {
                         item.home = None;
-                        home_changed = true;
+                        profiles_changed = true;
                     }
                 }
 
-                if home_changed && let Err(err) = profiles.save_file().await {
+                if profiles_changed && let Err(err) = profiles.save_file().await {
                     logging!(error, Type::Config, "无法保存已清理的 profiles.yaml: {err}");
                 }
                 profiles

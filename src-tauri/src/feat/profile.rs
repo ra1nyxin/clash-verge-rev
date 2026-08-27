@@ -91,7 +91,7 @@ async fn should_update_profile(uid: &String, ignore_auto_update: bool) -> Result
     } else if item.url.is_none() {
         logging!(warn, Type::Config, "Warning: [订阅更新] {uid} 缺少URL，无法更新");
         bail!("failed to get the profile item url");
-    } else if !ignore_auto_update && !item.option.as_ref().and_then(|o| o.allow_auto_update).unwrap_or(true) {
+    } else if !ignore_auto_update && !item.option.as_ref().and_then(|o| o.allow_auto_update).unwrap_or(false) {
         logging!(info, Type::Config, "[订阅更新] {} 禁止自动更新，跳过更新", uid);
         Ok(None)
     } else {

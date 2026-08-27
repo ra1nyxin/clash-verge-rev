@@ -527,7 +527,7 @@ impl PrfItem {
 }
 
 fn allow_auto_update_enabled(option: Option<&PrfOption>) -> bool {
-    option.and_then(|o| o.allow_auto_update).unwrap_or(true)
+    option.and_then(|o| o.allow_auto_update).unwrap_or(false)
 }
 
 /// Fix URLs where query parameters are incorrectly appended to the path segment
