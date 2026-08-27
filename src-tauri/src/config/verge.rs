@@ -212,6 +212,8 @@ pub struct IVergeTheme {
 
 impl IVerge {
     pub const VALID_CLASH_CORES: &'static [&'static str] = &["verge-mihomo"];
+    pub const DEFAULT_APP_LOG_MAX_SIZE: u64 = 32;
+    pub const DEFAULT_APP_LOG_MAX_COUNT: usize = 3;
 
     pub async fn validate_and_fix_config() -> Result<()> {
         let config_path = dirs::verge_path()?;
@@ -221,6 +223,12 @@ impl IVerge {
         };
 
         let mut needs_fix = false;
+
+        if config.app_log_max_size == Some(128) && config.app_log_max_count == Some(8) {
+            config.app_log_max_size = Some(Self::DEFAULT_APP_LOG_MAX_SIZE);
+            config.app_log_max_count = Some(Self::DEFAULT_APP_LOG_MAX_COUNT);
+            needs_fix = true;
+        }
 
         if let Some(ref core) = config.clash_core {
             let core_str = core.trim();
@@ -251,7 +259,7 @@ impl IVerge {
 
             Self::reload_config_after_fix(config).await;
         } else {
-            logging!(info, Type::Config, "clash_core配置验证通过: {:?}", config.clash_core);
+            logging!(info, Type::Config, "配置验证通过");
         }
 
         Ok(())
@@ -261,8 +269,7 @@ impl IVerge {
         logging!(
             info,
             Type::Config,
-            "内存配置已强制更新，新的clash_core: {:?}",
-            &updated_config.clash_core
+            "内存配置已更新"
         );
 
         let config_draft = Config::verge().await;
@@ -302,8 +309,8 @@ impl IVerge {
     pub fn template() -> Self {
         Self {
             app_log_level: Some("warn".into()),
-            app_log_max_size: Some(128),
-            app_log_max_count: Some(8),
+            app_log_max_size: Some(Self::DEFAULT_APP_LOG_MAX_SIZE),
+            app_log_max_count: Some(Self::DEFAULT_APP_LOG_MAX_COUNT),
             clash_core: Some("verge-mihomo".into()),
             language: Some(clash_verge_i18n::system_language().into()),
             theme_mode: Some("system".into()),

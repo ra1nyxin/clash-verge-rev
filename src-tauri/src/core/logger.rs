@@ -17,6 +17,7 @@ use log::{Level, LevelFilter, Record};
 use parking_lot::{Mutex, RwLock};
 
 use crate::{
+    config::IVerge,
     core::{CoreManager, manager::RunningMode, service},
     singleton,
     utils::dirs::{self, sidecar_log_dir},
@@ -40,8 +41,8 @@ impl Default for Logger {
             handle: Arc::new(Mutex::new(None)),
             sidecar_file_writer: Arc::new(RwLock::new(None)),
             log_level: Arc::new(RwLock::new(LevelFilter::Warn)),
-            log_max_size: AtomicU64::new(128),
-            log_max_count: AtomicUsize::new(8),
+            log_max_size: AtomicU64::new(IVerge::DEFAULT_APP_LOG_MAX_SIZE),
+            log_max_count: AtomicUsize::new(IVerge::DEFAULT_APP_LOG_MAX_COUNT),
         }
     }
 }
@@ -59,8 +60,12 @@ impl Logger {
             let verge = verge_guard.latest_arc();
             (
                 verge.get_log_level(),
-                verge.app_log_max_size.unwrap_or(128),
-                verge.app_log_max_count.unwrap_or(8),
+                verge
+                    .app_log_max_size
+                    .unwrap_or(IVerge::DEFAULT_APP_LOG_MAX_SIZE),
+                verge
+                    .app_log_max_count
+                    .unwrap_or(IVerge::DEFAULT_APP_LOG_MAX_COUNT),
             )
         };
         let log_level = std::env::var("RUST_LOG")
