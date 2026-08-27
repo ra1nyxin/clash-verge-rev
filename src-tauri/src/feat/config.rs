@@ -1,7 +1,8 @@
 use crate::{
     config::{Config, IVerge},
     core::{
-        CoreManager, autostart, handle, hotkey, logger::Logger, proxy_control, proxy_control::SystemProxyStateUnknown,
+        CoreManager, autostart, handle, logger::Logger, proxy_control,
+        proxy_control::SystemProxyStateUnknown,
         tray,
     },
     module::{auto_backup::AutoBackupManager, lightweight},
@@ -59,7 +60,6 @@ bitflags! {
         const LAUNCH = 1 << 3;
         const SYS_PROXY = 1 << 4;
         const SYSTRAY_ICON = 1 << 5;
-        const HOTKEY = 1 << 6;
         const SYSTRAY_MENU = 1 << 7;
         const SYSTRAY_TOOLTIP = 1 << 8;
         const SYSTRAY_CLICK_BEHAVIOR = 1 << 9;
@@ -103,7 +103,6 @@ fn determine_update_flags(patch: &IVerge) -> UpdateFlags {
     let http_enabled = patch.verge_http_enabled;
     let http_port = patch.verge_port;
     // let enable_tray_icon = patch.enable_tray_icon;
-    let enable_global_hotkey = patch.enable_global_hotkey;
     let tray_event = &patch.tray_event;
     let home_cards = patch.home_cards.as_ref();
     let enable_auto_light_weight = patch.enable_auto_light_weight_mode;
@@ -147,7 +146,7 @@ fn determine_update_flags(patch: &IVerge) -> UpdateFlags {
     if tun_mode.is_some() {
         update_flags.insert(UpdateFlags::CLASH_CONFIG | UpdateFlags::GROUP_SYS_TRAY);
     }
-    if enable_global_hotkey.is_some() || home_cards.is_some() {
+    if home_cards.is_some() {
         update_flags.insert(UpdateFlags::VERGE_CONFIG);
     }
     if auto_launch.is_some() {
@@ -173,9 +172,6 @@ fn determine_update_flags(patch: &IVerge) -> UpdateFlags {
         || tray_icon.is_some()
     {
         update_flags.insert(UpdateFlags::SYSTRAY_ICON);
-    }
-    if patch.hotkeys.is_some() {
-        update_flags.insert(UpdateFlags::HOTKEY | UpdateFlags::SYSTRAY_MENU);
     }
     if tray_event.is_some() {
         update_flags.insert(UpdateFlags::SYSTRAY_CLICK_BEHAVIOR);
@@ -233,11 +229,6 @@ async fn process_terminated_flags(update_flags: UpdateFlags, patch: &IVerge) -> 
             proxy_control::apply().await?;
             proxy_control::refresh_guard().await?;
         }
-    }
-    if update_flags.contains(UpdateFlags::HOTKEY)
-        && let Some(hotkeys) = &patch.hotkeys
-    {
-        hotkey::Hotkey::global().update(hotkeys.to_owned()).await?;
     }
     if update_flags.contains(UpdateFlags::SYSTRAY_MENU) {
         tray::Tray::global().update_menu().await?;

@@ -50,7 +50,6 @@ mod app_init {
             .plugin(tauri_plugin_notification::init())
             .plugin(tauri_plugin_clipboard_manager::init())
             .plugin(tauri_plugin_process::init())
-            .plugin(tauri_plugin_global_shortcut::Builder::new().build())
             .plugin(tauri_plugin_fs::init())
             .plugin(tauri_plugin_dialog::init())
             .plugin(tauri_plugin_shell::init())
@@ -321,11 +320,7 @@ pub fn run() -> std::process::ExitCode {
         #[cfg(target_os = "macos")]
         use crate::module::lightweight;
         use crate::utils::window_manager::WindowManager;
-        use crate::{
-            config::Config,
-            core::{self, handle, hotkey},
-            process::AsyncHandler,
-        };
+        use crate::core::{self, handle};
         use clash_verge_logging::{Type, logging};
         use tauri::AppHandle;
         #[cfg(target_os = "macos")]
@@ -373,53 +368,6 @@ pub fn run() -> std::process::ExitCode {
                     let _ = window.hide();
                 }
             }
-        }
-
-        pub fn handle_window_focus(focused: bool) {
-            AsyncHandler::spawn(move || async move {
-                let is_enable_global_hotkey = Config::verge().await.data_arc().enable_global_hotkey.unwrap_or(true);
-
-                if focused {
-                    #[cfg(target_os = "macos")]
-                    {
-                        use crate::core::hotkey::SystemHotkey;
-                        let _ = hotkey::Hotkey::global()
-                            .register_system_hotkey(SystemHotkey::CmdQ)
-                            .await;
-                        let _ = hotkey::Hotkey::global()
-                            .register_system_hotkey(SystemHotkey::CmdW)
-                            .await;
-                    }
-                    if !is_enable_global_hotkey {
-                        let _ = hotkey::Hotkey::global().init(false).await;
-                    }
-                    return;
-                }
-
-                #[cfg(target_os = "macos")]
-                {
-                    use crate::core::hotkey::SystemHotkey;
-                    let _ = hotkey::Hotkey::global().unregister_system_hotkey(SystemHotkey::CmdQ);
-                    let _ = hotkey::Hotkey::global().unregister_system_hotkey(SystemHotkey::CmdW);
-                }
-
-                if !is_enable_global_hotkey {
-                    let _ = hotkey::Hotkey::global().reset();
-                }
-            });
-        }
-
-        #[cfg(target_os = "macos")]
-        pub fn handle_window_destroyed() {
-            use crate::core::hotkey::SystemHotkey;
-            AsyncHandler::spawn(move || async move {
-                let _ = hotkey::Hotkey::global().unregister_system_hotkey(SystemHotkey::CmdQ);
-                let _ = hotkey::Hotkey::global().unregister_system_hotkey(SystemHotkey::CmdW);
-                let is_enable_global_hotkey = Config::verge().await.data_arc().enable_global_hotkey.unwrap_or(true);
-                if !is_enable_global_hotkey {
-                    let _ = hotkey::Hotkey::global().reset();
-                }
-            });
         }
     }
 
@@ -488,17 +436,12 @@ pub fn run() -> std::process::ExitCode {
             tauri::WindowEvent::CloseRequested { .. } => {
                 event_handlers::handle_window_close(&event);
             }
-            tauri::WindowEvent::Focused(focused) => {
+            tauri::WindowEvent::Focused(_focused) => {
                 // 兜底：原生取消最小化只触发 Focused、不走 activate_window（macOS）
                 #[cfg(target_os = "macos")]
-                if focused {
+                if _focused {
                     crate::utils::resolve::window::reload_main_window_if_needed();
                 }
-                event_handlers::handle_window_focus(focused);
-            }
-            #[cfg(target_os = "macos")]
-            tauri::WindowEvent::Destroyed => {
-                event_handlers::handle_window_destroyed();
             }
             _ => {}
         },

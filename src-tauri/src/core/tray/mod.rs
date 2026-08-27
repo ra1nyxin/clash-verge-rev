@@ -401,30 +401,6 @@ impl Tray {
 
 }
 
-fn create_hotkeys(hotkeys: &Option<Vec<String>>) -> HashMap<&str, &str> {
-    hotkeys
-        .as_ref()
-        .map(|h| {
-            h.iter()
-                .filter_map(|item| {
-                    let mut parts = item.split(',');
-                    match (parts.next(), parts.next()) {
-                        (Some(func), Some(key)) => {
-                            // 托盘菜单中的 `accelerator` 属性，在 Linux/Windows 中都不支持小键盘按键的解析
-                            if key.to_uppercase().contains("NUMPAD") {
-                                None
-                            } else {
-                                Some((func, key))
-                            }
-                        }
-                        _ => None,
-                    }
-                })
-                .collect::<HashMap<&str, &str>>()
-        })
-        .unwrap_or_default()
-}
-
 fn create_profile_menu_item(
     app_handle: &AppHandle,
     profiles_preview: Vec<IProfilePreview<'_>>,
@@ -633,8 +609,6 @@ async fn create_tray_menu(
 
     let version = env!("CARGO_PKG_VERSION");
 
-    let hotkeys = create_hotkeys(&verge_settings.hotkeys);
-
     let profile_menu_items: Vec<CheckMenuItem<Wry>> = create_profile_menu_item(app_handle, profiles_preview)?;
 
     let texts = MenuTexts::new();
@@ -648,7 +622,7 @@ async fn create_tray_menu(
         MenuIds::DASHBOARD,
         &texts.dashboard,
         true,
-        hotkeys.get("open_or_close_dashboard").copied(),
+        None::<&str>,
     )?;
 
     let rule_mode = &CheckMenuItem::with_id(
@@ -657,7 +631,7 @@ async fn create_tray_menu(
         &texts.rule_mode,
         true,
         current_proxy_mode == "rule",
-        hotkeys.get("clash_mode_rule").copied(),
+        None::<&str>,
     )?;
 
     let global_mode = &CheckMenuItem::with_id(
@@ -666,7 +640,7 @@ async fn create_tray_menu(
         &texts.global_mode,
         true,
         current_proxy_mode == "global",
-        hotkeys.get("clash_mode_global").copied(),
+        None::<&str>,
     )?;
 
     let direct_mode = &CheckMenuItem::with_id(
@@ -675,7 +649,7 @@ async fn create_tray_menu(
         &texts.direct_mode,
         true,
         current_proxy_mode == "direct",
-        hotkeys.get("clash_mode_direct").copied(),
+        None::<&str>,
     )?;
 
     let outbound_modes = if show_outbound_modes_inline {
@@ -727,7 +701,7 @@ async fn create_tray_menu(
         &texts.system_proxy,
         true,
         system_proxy_enabled,
-        hotkeys.get("toggle_system_proxy").copied(),
+        None::<&str>,
     )?;
 
     let tun_mode = &CheckMenuItem::with_id(
@@ -736,7 +710,7 @@ async fn create_tray_menu(
         &texts.tun_mode,
         tun_mode_available,
         tun_mode_enabled,
-        hotkeys.get("toggle_tun_mode").copied(),
+        None::<&str>,
     )?;
 
     let close_all_connections = &MenuItem::with_id(
@@ -753,7 +727,7 @@ async fn create_tray_menu(
         &texts.lightweight_mode,
         true,
         options.is_lightweight_mode,
-        hotkeys.get("entry_lightweight_mode").copied(),
+        None::<&str>,
     )?;
 
     let copy_env = &MenuItem::with_id(app_handle, MenuIds::COPY_ENV, &texts.copy_env, true, None::<&str>)?;
@@ -808,12 +782,7 @@ async fn create_tray_menu(
         ],
     )?;
 
-    let quit_accelerator = hotkeys.get("quit").copied();
-
-    #[cfg(target_os = "macos")]
-    let quit_accelerator = quit_accelerator.or(Some("Cmd+Q"));
-
-    let quit = &MenuItem::with_id(app_handle, MenuIds::EXIT, &texts.exit, true, quit_accelerator)?;
+    let quit = &MenuItem::with_id(app_handle, MenuIds::EXIT, &texts.exit, true, None::<&str>)?;
 
     let separator = &PredefinedMenuItem::separator(app_handle)?;
 

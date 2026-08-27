@@ -1,7 +1,6 @@
 pub mod autostart;
 pub mod backup;
 pub mod handle;
-pub mod hotkey;
 pub mod listener;
 pub mod logger;
 pub mod manager;

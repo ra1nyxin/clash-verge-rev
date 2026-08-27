@@ -92,12 +92,6 @@ pub struct IVerge {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub clash_core: Option<String>,
 
-    /// format: {func},{key}
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub hotkeys: Option<Vec<String>>,
-
-    pub enable_global_hotkey: Option<bool>,
-
     pub home_cards: Option<serde_json::Value>,
 
     pub auto_close_connection: Option<bool>,
@@ -364,7 +358,6 @@ impl IVerge {
             webdav_password: None,
             tray_proxy_groups_display_mode: Some("default".into()),
             tray_inline_outbound_modes: Some(false),
-            enable_global_hotkey: Some(true),
             enable_auto_light_weight_mode: Some(true),
             auto_light_weight_minutes: Some(10),
             enable_dns_settings: Some(false),
@@ -439,9 +432,6 @@ impl IVerge {
         patch!(theme_setting);
         patch!(web_ui_list);
         patch!(clash_core);
-        patch!(hotkeys);
-        patch!(enable_global_hotkey);
-
         patch!(auto_close_connection);
         patch!(default_latency_test);
         patch!(default_latency_timeout);

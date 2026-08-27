@@ -7,7 +7,6 @@ use crate::{
     core::{
         CoreManager,
         handle::Handle,
-        hotkey::Hotkey,
         logger::Logger,
         service::{SERVICE_MANAGER, ServiceManager},
         tray::Tray,
@@ -72,7 +71,6 @@ pub(crate) fn resolve_setup_async() {
         let _ = futures::join!(
             core_init,
             init_tray(),
-            init_hotkey(),
             init_auto_lightweight_boot(),
             init_auto_backup(),
         );
@@ -133,11 +131,6 @@ async fn init_resources() {
 
 async fn init_startup_script() {
     logging_error!(Type::Setup, init::startup_script().await);
-}
-
-async fn init_hotkey() {
-    let skip_register_hotkeys = !Config::verge().await.latest_arc().enable_global_hotkey.unwrap_or(true);
-    logging_error!(Type::Setup, Hotkey::global().init(skip_register_hotkeys).await);
 }
 
 async fn init_auto_lightweight_boot() {
