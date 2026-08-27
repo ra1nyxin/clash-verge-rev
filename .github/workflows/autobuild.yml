@@ -17,7 +17,7 @@ env:
   RUST_BACKTRACE: short
   HUSKY: 0
 concurrency:
-  group: '${{ github.workflow }} - ${{ github.ref }} - ${{ github.sha }}'
+  group: '${{ github.workflow }} - ${{ github.ref }}'
   cancel-in-progress: true
 
 jobs:
