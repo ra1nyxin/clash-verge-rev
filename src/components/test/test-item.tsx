@@ -7,7 +7,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { BaseLoading } from '@/components/base'
-import { useIconCache } from '@/hooks/use-icon-cache'
 import { cmdTestDelay } from '@/services/cmds'
 import delayManager from '@/services/delay'
 import { subscribeVergeEvents } from '@/services/events'
@@ -44,7 +43,8 @@ export const TestItem = ({
   const [position, setPosition] = useState({ left: 0, top: 0 })
   const [delay, setDelay] = useState(-1)
   const { uid, name, icon, url } = itemData
-  const iconCachePath = useIconCache({ icon, cacheKey: uid })
+  const hasEmbeddedIcon =
+    icon?.trim().startsWith('data') || icon?.trim().startsWith('<svg')
 
   const onDelay = useCallback(async () => {
     setDelay(-2)
@@ -99,18 +99,12 @@ export const TestItem = ({
           {...attributes}
           {...listeners}
         >
-          {icon && icon.trim() !== '' ? (
+          {hasEmbeddedIcon ? (
             <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-              {icon.trim().startsWith('http') && (
-                <img
-                  src={iconCachePath === '' ? icon : iconCachePath}
-                  height="40px"
-                />
-              )}
-              {icon.trim().startsWith('data') && (
+              {icon?.trim().startsWith('data') && (
                 <img src={icon} height="40px" />
               )}
-              {icon.trim().startsWith('<svg') && (
+              {icon?.trim().startsWith('<svg') && (
                 <img
                   src={`data:image/svg+xml;base64,${btoa(icon)}`}
                   height="40px"

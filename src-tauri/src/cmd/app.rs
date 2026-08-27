@@ -62,11 +62,6 @@ pub fn get_auto_launch_status() -> CmdResult<bool> {
 }
 
 #[tauri::command]
-pub async fn download_icon_cache(url: String, name: String) -> CmdResult<String> {
-    feat::download_icon_cache(url, name).await
-}
-
-#[tauri::command]
 pub async fn copy_icon_file(path: String, icon_info: feat::IconInfo) -> CmdResult<String> {
     feat::copy_icon_file(path, icon_info).await
 }

@@ -292,10 +292,6 @@ export async function copyIconFile(
   return invoke<void>('copy_icon_file', { path, iconInfo })
 }
 
-export async function downloadIconCache(url: string, name: string) {
-  return invoke<string>('download_icon_cache', { url, name })
-}
-
 export async function getNetworkInterfaces() {
   return invoke<string[]>('get_network_interfaces')
 }

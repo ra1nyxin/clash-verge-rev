@@ -16,7 +16,6 @@ import {
 import { memo, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { useIconCache } from '@/hooks/use-icon-cache'
 import { useVerge } from '@/hooks/use-verge'
 import { useThemeMode } from '@/services/states'
 import type { ResolvedProxyMember } from '@/types/proxy-view'
@@ -60,12 +59,6 @@ export const ProxyRender = memo(function ProxyRender(props: RenderProps) {
   const mode = useThemeMode()
   const isDark = mode === 'dark'
   const itembackgroundcolor = isDark ? '#282A36' : '#ffffff'
-  const iconCachePath = useIconCache({
-    icon: group.icon,
-    cacheKey: group.name.replaceAll(' ', ''),
-    enabled: enable_group_icon,
-  })
-
   const showType = headState?.showType
   const memberColItemsMemo = useMemo(() => {
     if (type !== 4 || !memberCol) {
@@ -109,14 +102,6 @@ export const ProxyRender = memo(function ProxyRender(props: RenderProps) {
         >
           <Box sx={{ width: '100%' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-              {enable_group_icon && group.icon?.trim().startsWith('http') && (
-                <img
-                  src={iconCachePath === '' ? group.icon : iconCachePath}
-                  alt="group icon"
-                  width="32px"
-                  style={{ marginRight: '12px', borderRadius: '6px' }}
-                />
-              )}
               {enable_group_icon && group.icon?.trim().startsWith('data') && (
                 <img
                   src={group.icon}

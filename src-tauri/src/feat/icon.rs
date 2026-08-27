@@ -3,16 +3,9 @@ use crate::{
     utils::dirs::{self, PathBufExec as _},
 };
 use clash_verge_logging::{Type, logging};
-use futures::StreamExt as _;
 use smartstring::alias::String;
 use std::path::{Component, Path, PathBuf};
 use tokio::fs;
-use tokio::io::AsyncWriteExt as _;
-use tokio::sync::Semaphore;
-
-const MAX_ICON_SIZE: usize = 5 * 1024 * 1024;
-const MAX_CONCURRENT_ICON_DOWNLOADS: usize = 2;
-static ICON_DOWNLOAD_LIMIT: Semaphore = Semaphore::const_new(MAX_CONCURRENT_ICON_DOWNLOADS);
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct IconInfo {
@@ -44,127 +37,6 @@ fn ensure_icon_cache_target(icon_cache_dir: &Path, file_name: &str) -> CmdResult
     }
 
     Ok(icon_path)
-}
-
-fn normalized_text_prefix(content: &[u8]) -> std::string::String {
-    let content = content.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(content);
-    let start = content
-        .iter()
-        .position(|byte| !byte.is_ascii_whitespace())
-        .unwrap_or(content.len());
-    let end = content.len().min(start.saturating_add(2048));
-    let prefix = &content[start..end];
-    std::string::String::from_utf8_lossy(prefix).to_ascii_lowercase()
-}
-
-fn looks_like_html(content: &[u8]) -> bool {
-    let prefix = normalized_text_prefix(content);
-    prefix.starts_with("<!doctype html") || prefix.starts_with("<html") || prefix.starts_with("<head")
-}
-
-fn looks_like_svg(content: &[u8]) -> bool {
-    let prefix = normalized_text_prefix(content);
-    prefix.starts_with("<svg")
-        || ((prefix.starts_with("<?xml") || prefix.starts_with("<!doctype svg")) && prefix.contains("<svg"))
-}
-
-fn is_supported_icon_content(content: &[u8]) -> bool {
-    if looks_like_html(content) {
-        return false;
-    }
-
-    tauri::image::Image::from_bytes(content).is_ok() || looks_like_svg(content)
-}
-
-fn append_icon_chunk_with_limit(content: &mut Vec<u8>, chunk: &[u8], limit: usize) -> CmdResult<()> {
-    if content.len().saturating_add(chunk.len()) > limit {
-        return Err(format!("Downloaded icon exceeds {limit} bytes").into());
-    }
-    content.extend_from_slice(chunk);
-    Ok(())
-}
-
-fn append_icon_chunk(content: &mut Vec<u8>, chunk: &[u8]) -> CmdResult<()> {
-    append_icon_chunk_with_limit(content, chunk, MAX_ICON_SIZE)
-}
-
-async fn read_icon_response(response: reqwest::Response) -> CmdResult<Vec<u8>> {
-    if response.content_length().is_some_and(|length| length > MAX_ICON_SIZE as u64) {
-        return Err(format!("Downloaded icon exceeds {MAX_ICON_SIZE} bytes").into());
-    }
-
-    let capacity = response.content_length().unwrap_or_default() as usize;
-    let mut content = Vec::with_capacity(capacity.min(MAX_ICON_SIZE));
-    let mut stream = response.bytes_stream();
-    while let Some(chunk) = stream.next().await {
-        let chunk = chunk.stringify_err()?;
-        append_icon_chunk(&mut content, &chunk)?;
-    }
-    Ok(content)
-}
-
-pub async fn download_icon_cache(url: String, name: String) -> CmdResult<String> {
-    let icon_cache_dir = dirs::app_home_dir().stringify_err()?.join("icons").join("cache");
-    let icon_name = normalize_icon_segment(name.as_str())?;
-    let icon_path = ensure_icon_cache_target(&icon_cache_dir, icon_name.as_str())?;
-
-    if icon_path.exists() {
-        return Ok(icon_path.to_string_lossy().into());
-    }
-
-    if !icon_cache_dir.exists() {
-        fs::create_dir_all(&icon_cache_dir).await.stringify_err()?;
-    }
-
-    let _download_permit = match ICON_DOWNLOAD_LIMIT.acquire().await {
-        Ok(permit) => permit,
-        Err(error) => return Err(error.to_string().into()),
-    };
-    if icon_path.exists() {
-        return Ok(icon_path.to_string_lossy().into());
-    }
-
-    let temp_name = format!("{icon_name}.downloading");
-    let temp_path = ensure_icon_cache_target(&icon_cache_dir, temp_name.as_str())?;
-
-    let response = reqwest::get(url.as_str()).await.stringify_err()?;
-    let response = response.error_for_status().stringify_err()?;
-    let content = read_icon_response(response).await?;
-
-    if !is_supported_icon_content(&content) {
-        let _ = temp_path.remove_if_exists().await;
-        return Err(format!("Downloaded content is not a valid image: {}", url.as_str()).into());
-    }
-
-    {
-        let mut file = match fs::File::create(&temp_path).await {
-            Ok(file) => file,
-            Err(_) => {
-                if icon_path.exists() {
-                    return Ok(icon_path.to_string_lossy().into());
-                }
-                return Err("Failed to create temporary file".into());
-            }
-        };
-        file.write_all(content.as_ref()).await.stringify_err()?;
-        file.flush().await.stringify_err()?;
-    }
-
-    if !icon_path.exists() {
-        match fs::rename(&temp_path, &icon_path).await {
-            Ok(_) => {}
-            Err(_) => {
-                let _ = temp_path.remove_if_exists().await;
-                if icon_path.exists() {
-                    return Ok(icon_path.to_string_lossy().into());
-                }
-            }
-        }
-    } else {
-        let _ = temp_path.remove_if_exists().await;
-    }
-
-    Ok(icon_path.to_string_lossy().into())
 }
 
 pub async fn copy_icon_file(path: String, icon_info: IconInfo) -> CmdResult<String> {
@@ -212,19 +84,5 @@ pub async fn copy_icon_file(path: String, icon_info: IconInfo) -> CmdResult<Stri
         }
     } else {
         Err("file not found".into())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::append_icon_chunk_with_limit;
-
-    #[test]
-    fn icon_chunks_stop_at_the_configured_limit() {
-        let mut content = vec![1, 2];
-        assert!(append_icon_chunk_with_limit(&mut content, &[3, 4], 4).is_ok());
-        assert_eq!(content, [1, 2, 3, 4]);
-        assert!(append_icon_chunk_with_limit(&mut content, &[5], 4).is_err());
-        assert_eq!(content, [1, 2, 3, 4]);
     }
 }
