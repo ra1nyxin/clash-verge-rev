@@ -15,7 +15,6 @@ import getSystem from '@/utils/get-system'
 import { BackupViewer } from './mods/backup-viewer'
 import { ConfigViewer } from './mods/config-viewer'
 import { GuardState } from './mods/guard-state'
-import { HotkeyViewer } from './mods/hotkey-viewer'
 import { LayoutViewer } from './mods/layout-viewer'
 import { MiscViewer } from './mods/misc-viewer'
 import { SettingItem, SettingList } from './mods/setting-comp'
@@ -50,7 +49,6 @@ const SettingVergeBasic = ({ onError }: Props) => {
     start_page,
   } = verge ?? {}
   const configRef = useRef<DialogRef>(null)
-  const hotkeyRef = useRef<DialogRef>(null)
   const miscRef = useRef<DialogRef>(null)
   const themeRef = useRef<DialogRef>(null)
   const layoutRef = useRef<DialogRef>(null)
@@ -69,7 +67,6 @@ const SettingVergeBasic = ({ onError }: Props) => {
     <SettingList title={t('settings.components.verge.basic.title')}>
       <ThemeViewer ref={themeRef} />
       <ConfigViewer ref={configRef} />
-      <HotkeyViewer ref={hotkeyRef} />
       <MiscViewer ref={miscRef} />
       <LayoutViewer ref={layoutRef} />
       <BackupViewer ref={backupRef} />
@@ -250,11 +247,6 @@ const SettingVergeBasic = ({ onError }: Props) => {
       <SettingItem
         onClick={() => miscRef.current?.open()}
         label={t('settings.components.verge.basic.fields.misc')}
-      />
-
-      <SettingItem
-        onClick={() => hotkeyRef.current?.open()}
-        label={t('settings.components.verge.basic.fields.hotkeySetting')}
       />
     </SettingList>
   )

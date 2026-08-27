@@ -17,7 +17,6 @@ import { version } from '@root/package.json'
 
 import { BackupViewer } from './mods/backup-viewer'
 import { ConfigViewer } from './mods/config-viewer'
-import { HotkeyViewer } from './mods/hotkey-viewer'
 import { LayoutViewer } from './mods/layout-viewer'
 import { LiteModeViewer } from './mods/lite-mode-viewer'
 import { MiscViewer } from './mods/misc-viewer'
@@ -32,7 +31,6 @@ const SettingVergeAdvanced = ({ onError: _ }: Props) => {
   const { t } = useTranslation()
 
   const configRef = useRef<DialogRef>(null)
-  const hotkeyRef = useRef<DialogRef>(null)
   const miscRef = useRef<DialogRef>(null)
   const themeRef = useRef<DialogRef>(null)
   const layoutRef = useRef<DialogRef>(null)
@@ -57,7 +55,6 @@ const SettingVergeAdvanced = ({ onError: _ }: Props) => {
     <SettingList title={t('settings.components.verge.advanced.title')}>
       <ThemeViewer ref={themeRef} />
       <ConfigViewer ref={configRef} />
-      <HotkeyViewer ref={hotkeyRef} />
       <MiscViewer ref={miscRef} />
       <LayoutViewer ref={layoutRef} />
       <BackupViewer ref={backupRef} />
