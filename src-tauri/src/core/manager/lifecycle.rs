@@ -7,7 +7,6 @@ use crate::core::service::{SERVICE_MANAGER, ServiceStatus};
 use anyhow::{Result, ensure};
 use clash_verge_logging::{Type, logging};
 use scopeguard::defer;
-use smartstring::alias::String;
 use std::path::Path;
 #[cfg(target_os = "windows")]
 use tauri_plugin_clash_verge_sysinfo::is_current_app_handle_admin;
