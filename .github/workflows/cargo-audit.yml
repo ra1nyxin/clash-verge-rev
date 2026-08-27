@@ -8,20 +8,27 @@ permissions:
 
 env:
   HUSKY: 0
+  CARGO_NET_RETRY: '10'
+  CARGO_HTTP_TIMEOUT: '120'
+  CARGO_HTTP_MULTIPLEXING: 'false'
 
 jobs:
   audit:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v7
+        timeout-minutes: 10
 
       - name: Install Rust Stable
         uses: dtolnay/rust-toolchain@master
+        timeout-minutes: 15
         with:
           toolchain: stable
 
       - name: Run Cargo Audit
         uses: rustsec/audit-check@v2
+        timeout-minutes: 30
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
