@@ -102,25 +102,6 @@ export interface TranslationResources {
             tunMode: string
           }
         }
-        systemInfo: {
-          actions: {
-            settings: string
-          }
-          badges: {
-            adminMode: string
-            adminServiceMode: string
-            serviceMode: string
-            sidecarMode: string
-          }
-          fields: {
-            autoLaunch: string
-            lastCheckUpdate: string
-            osInfo: string
-            runningMode: string
-            vergeVersion: string
-          }
-          title: string
-        }
         tests: {
           title: string
         }
@@ -159,7 +140,6 @@ export interface TranslationResources {
             network: string
             profile: string
             proxyMode: string
-            systemInfo: string
             tests: string
             traffic: string
           }
@@ -686,7 +666,6 @@ export interface TranslationResources {
             }
             fields: {
               copyEnvType: string
-              hotkeySetting: string
               language: string
               layoutSetting: string
               misc: string
@@ -1017,22 +996,6 @@ export interface TranslationResources {
             fallbackFilter: string
             general: string
             hosts: string
-          }
-        }
-        hotkey: {
-          functions: {
-            direct: string
-            entryLightweightMode: string
-            global: string
-            openOrCloseDashboard: string
-            reactivateProfiles: string
-            rule: string
-            toggleSystemProxy: string
-            toggleTunMode: string
-          }
-          title: string
-          toggles: {
-            enableGlobal: string
           }
         }
         liteMode: {

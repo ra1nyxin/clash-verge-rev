@@ -18,8 +18,7 @@
         "proxyMode": "代理模式卡",
         "traffic": "流量统计卡",
         "tests": "网站测试卡",
-        "clashInfo": "Clash 信息卡",
-        "systemInfo": "系统信息卡"
+        "clashInfo": "Clash 信息卡"
       },
       "title": "首页设置"
     },
@@ -47,25 +46,6 @@
         "mixedPort": "混合代理端口",
         "uptime": "运行时间",
         "rulesCount": "规则数量"
-      }
-    },
-    "systemInfo": {
-      "title": "系统信息",
-      "fields": {
-        "osInfo": "操作系统信息",
-        "autoLaunch": "开机自启",
-        "runningMode": "运行模式",
-        "lastCheckUpdate": "最后检查更新",
-        "vergeVersion": "Verge 版本"
-      },
-      "actions": {
-        "settings": "设置"
-      },
-      "badges": {
-        "adminMode": "管理员模式",
-        "serviceMode": "服务模式",
-        "sidecarMode": "用户模式",
-        "adminServiceMode": "管理员 + 服务模式"
       }
     },
     "currentProxy": {

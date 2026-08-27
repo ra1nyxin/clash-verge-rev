@@ -18,8 +18,7 @@
         "proxyMode": "Proxy Mode Card",
         "traffic": "Traffic Stats Card",
         "tests": "Website Tests Card",
-        "clashInfo": "Clash Info Cards",
-        "systemInfo": "System Info Cards"
+        "clashInfo": "Clash Info Cards"
       },
       "title": "Home Settings"
     },
@@ -47,25 +46,6 @@
         "mixedPort": "Mixed Port",
         "uptime": "Uptime",
         "rulesCount": "Rules Count"
-      }
-    },
-    "systemInfo": {
-      "title": "System Info",
-      "fields": {
-        "osInfo": "OS Info",
-        "autoLaunch": "Auto Launch",
-        "runningMode": "Running Mode",
-        "lastCheckUpdate": "Last Check Update",
-        "vergeVersion": "Verge Version"
-      },
-      "actions": {
-        "settings": "Settings"
-      },
-      "badges": {
-        "adminMode": "Administrator Mode",
-        "serviceMode": "Service Mode",
-        "sidecarMode": "User Mode",
-        "adminServiceMode": "Admin + Service Mode"
       }
     },
     "currentProxy": {

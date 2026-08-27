@@ -174,8 +174,7 @@
           "startupScript": "启动脚本",
           "themeSetting": "主题设置",
           "layoutSetting": "界面设置",
-          "misc": "杂项设置",
-          "hotkeySetting": "热键设置"
+          "misc": "杂项设置"
         }
       },
       "advanced": {
@@ -613,22 +612,6 @@
         "clashInfoUnavailable": "内核连接信息暂不可用",
         "invalidServer": "内核服务地址“{{server}}”无效",
         "openFailed": "打开 Web UI 失败"
-      }
-    },
-    "hotkey": {
-      "toggles": {
-        "enableGlobal": "启用全局热键"
-      },
-      "title": "热键设置",
-      "functions": {
-        "rule": "规则模式",
-        "global": "全局模式",
-        "openOrCloseDashboard": "打开/关闭面板",
-        "toggleSystemProxy": "打开/关闭系统代理",
-        "toggleTunMode": "打开/关闭 TUN 模式",
-        "entryLightweightMode": "进入轻量模式",
-        "direct": "直连模式",
-        "reactivateProfiles": "重新激活订阅"
       }
     },
     "networkInterface": {
