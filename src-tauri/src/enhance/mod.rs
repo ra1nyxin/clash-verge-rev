@@ -668,6 +668,40 @@ fn disable_provider_background_network(mut config: Mapping) -> Mapping {
     config
 }
 
+fn replace_automatic_proxy_groups(mut config: Mapping) -> Mapping {
+    const AUTOMATIC_TYPES: &[&str] = &["url-test", "fallback", "load-balance"];
+    const AUTOMATIC_FIELDS: &[&str] = &[
+        "url",
+        "interval",
+        "lazy",
+        "tolerance",
+        "strategy",
+        "max-failed-times",
+        "expected-status",
+    ];
+
+    let Some(groups) = config.get_mut("proxy-groups").and_then(Value::as_sequence_mut) else {
+        return config;
+    };
+
+    for group in groups.iter_mut().filter_map(Value::as_mapping_mut) {
+        let is_automatic = group
+            .get("type")
+            .and_then(Value::as_str)
+            .is_some_and(|kind| AUTOMATIC_TYPES.contains(&kind));
+        if !is_automatic {
+            continue;
+        }
+
+        group.insert("type".into(), "select".into());
+        for field in AUTOMATIC_FIELDS {
+            group.remove(*field);
+        }
+    }
+
+    config
+}
+
 /// 当 DNS 处于 fake-ip 模式且启用 IPv6 时，补充缺失的 `fake-ip-range6`，
 /// 否则 AAAA 查询无法获得 fake-ip，导致 IPv6 解析失败（见 issue #7373）。
 /// 兼容旧版本生成的、缺少该字段的 dns_config.yaml。
@@ -797,6 +831,7 @@ pub async fn enhance(profiles: &IProfiles) -> Result<(Mapping, HashSet<String>, 
 
     let config = cleanup_proxy_groups(config);
     let config = disable_provider_background_network(config);
+    let config = replace_automatic_proxy_groups(config);
     let config = use_sort(config);
 
     let mut exists_keys_set = HashSet::new();
@@ -1269,7 +1304,8 @@ mod authoritative_field_tests {
 mod tests {
     use super::{
         ChainItem, ChainType, cleanup_proxy_groups, disable_provider_background_network,
-        ensure_lan_bind_address, process_global_items, process_profile_items, use_keys,
+        ensure_lan_bind_address, process_global_items, process_profile_items,
+        replace_automatic_proxy_groups, use_keys,
     };
     use std::collections::HashMap;
 
@@ -1559,6 +1595,69 @@ rule-providers:
             .and_then(serde_yaml_ng::Value::as_mapping)
             .expect("remote rule provider should remain a mapping");
         assert_eq!(remote_rules.get("interval").and_then(serde_yaml_ng::Value::as_u64), Some(0));
+    }
+
+    #[test]
+    fn automatic_proxy_groups_become_manual_without_scheduling_fields() {
+        let config = mapping(
+            r#"
+proxy-groups:
+  - name: automatic
+    type: url-test
+    proxies: [node-a, node-b]
+    url: https://example.com/generate_204
+    interval: 300
+    lazy: true
+    tolerance: 50
+"#,
+        );
+
+        let result = replace_automatic_proxy_groups(config);
+        let group = result
+            .get("proxy-groups")
+            .and_then(serde_yaml_ng::Value::as_sequence)
+            .and_then(|groups| groups.first())
+            .and_then(serde_yaml_ng::Value::as_mapping)
+            .expect("proxy group should remain a mapping");
+
+        assert_eq!(group.get("type").and_then(serde_yaml_ng::Value::as_str), Some("select"));
+        assert_eq!(
+            group
+                .get("proxies")
+                .and_then(serde_yaml_ng::Value::as_sequence)
+                .map(Vec::len),
+            Some(2)
+        );
+        for key in ["url", "interval", "lazy", "tolerance"] {
+            assert!(!group.contains_key(key), "automatic field {key} should be removed");
+        }
+    }
+
+    #[test]
+    fn manual_proxy_groups_are_left_untouched() {
+        let config = mapping(
+            r#"
+proxy-groups:
+  - name: manual
+    type: select
+    proxies: [node-a]
+    url: https://example.com/custom
+"#,
+        );
+
+        let result = replace_automatic_proxy_groups(config);
+        let group = result
+            .get("proxy-groups")
+            .and_then(serde_yaml_ng::Value::as_sequence)
+            .and_then(|groups| groups.first())
+            .and_then(serde_yaml_ng::Value::as_mapping)
+            .expect("proxy group should remain a mapping");
+
+        assert_eq!(group.get("type").and_then(serde_yaml_ng::Value::as_str), Some("select"));
+        assert_eq!(
+            group.get("url").and_then(serde_yaml_ng::Value::as_str),
+            Some("https://example.com/custom")
+        );
     }
 
     #[test]
