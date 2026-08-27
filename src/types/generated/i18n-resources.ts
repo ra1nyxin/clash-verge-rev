@@ -343,6 +343,7 @@ export interface TranslationResources {
           }
           fields: {
             acceptInvalidCerts: string
+            customUserAgent: string
             description: string
             httpTimeout: string
             subscriptionUrl: string
@@ -358,6 +359,18 @@ export interface TranslationResources {
           types: {
             local: string
             remote: string
+          }
+          userAgents: {
+            androidChrome: string
+            curl: string
+            custom: string
+            default: string
+            generic: string
+            iphoneSafari: string
+            linuxFirefox: string
+            macosSafari: string
+            windowsChrome: string
+            windowsEdge: string
           }
         }
         proxiesEditor: {

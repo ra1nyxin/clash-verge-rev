@@ -105,10 +105,23 @@
         "description": "描述",
         "subscriptionUrl": "订阅链接",
         "userAgent": "用户代理",
+        "customUserAgent": "自定义用户代理",
         "httpTimeout": "HTTP 请求超时",
         "useSystemProxy": "使用系统代理更新",
         "useClashProxy": "使用内核代理更新",
         "acceptInvalidCerts": "允许无效证书（危险）"
+      },
+      "userAgents": {
+        "default": "默认（Clash Verge）",
+        "generic": "通用客户端（无 Clash 标识）",
+        "windowsChrome": "Windows · Chrome",
+        "windowsEdge": "Windows · Edge",
+        "macosSafari": "macOS · Safari",
+        "linuxFirefox": "Linux · Firefox",
+        "androidChrome": "Android · Chrome",
+        "iphoneSafari": "iPhone · Safari",
+        "curl": "命令行 · curl",
+        "custom": "自定义"
       },
       "types": {
         "remote": "远程",

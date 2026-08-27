@@ -105,10 +105,23 @@
         "description": "Descriptions",
         "subscriptionUrl": "Subscription URL",
         "userAgent": "User Agent",
+        "customUserAgent": "Custom User Agent",
         "httpTimeout": "HTTP Request Timeout",
         "useSystemProxy": "Use System Proxy",
         "useClashProxy": "Use Clash Proxy",
         "acceptInvalidCerts": "Allows Invalid Certificates (Danger)"
+      },
+      "userAgents": {
+        "default": "Default (Clash Verge)",
+        "generic": "Generic client (no Clash identifier)",
+        "windowsChrome": "Windows · Chrome",
+        "windowsEdge": "Windows · Edge",
+        "macosSafari": "macOS · Safari",
+        "linuxFirefox": "Linux · Firefox",
+        "androidChrome": "Android · Chrome",
+        "iphoneSafari": "iPhone · Safari",
+        "curl": "Command line · curl",
+        "custom": "Custom"
       },
       "types": {
         "remote": "Remote",
