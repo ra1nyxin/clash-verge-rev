@@ -8,10 +8,6 @@ const [ThemeModeProvider, useThemeMode, useSetThemeMode] = createContextState<
 const [LoadingCacheProvider, useLoadingCache, useSetLoadingCache] =
   createContextState<Set<string>>(new Set())
 
-// save update state
-const [UpdateStateProvider, useUpdateState, useSetUpdateState] =
-  createContextState<boolean>(false)
-
 export {
   ThemeModeProvider,
   useThemeMode,
@@ -19,7 +15,4 @@ export {
   LoadingCacheProvider,
   useLoadingCache,
   useSetLoadingCache,
-  UpdateStateProvider,
-  useUpdateState,
-  useSetUpdateState,
 }
