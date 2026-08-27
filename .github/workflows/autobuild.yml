@@ -16,6 +16,13 @@ env:
   CARGO_INCREMENTAL: 0
   RUST_BACKTRACE: short
   HUSKY: 0
+  CARGO_NET_RETRY: '10'
+  CARGO_HTTP_TIMEOUT: '120'
+  CARGO_HTTP_MULTIPLEXING: 'false'
+  PNPM_CONFIG_FETCH_RETRIES: '5'
+  PNPM_CONFIG_FETCH_RETRY_FACTOR: '2'
+  PNPM_CONFIG_FETCH_RETRY_MINTIMEOUT: '20000'
+  PNPM_CONFIG_FETCH_RETRY_MAXTIMEOUT: '120000'
 concurrency:
   group: '${{ github.workflow }} - ${{ github.ref }}'
   cancel-in-progress: true
@@ -24,18 +31,22 @@ jobs:
   update_tag:
     name: Update tag
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     outputs:
       should_build: ${{ steps.check_latest.outputs.should_build }}
       release_id: ${{ steps.upload_release.outputs.id }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        timeout-minutes: 10
 
       - name: Check latest branch commit
         id: check_latest
         shell: bash
+        timeout-minutes: 10
         run: |
-          latest_sha=$(git ls-remote origin "refs/heads/$GITHUB_REF_NAME" | cut -f1)
+          latest_sha=$(bash .github/scripts/retry-command --timeout-seconds 120 -- \
+            git ls-remote origin "refs/heads/$GITHUB_REF_NAME" | cut -f1)
           if [ "$GITHUB_SHA" = "$latest_sha" ]; then
             echo "should_build=true" >> "$GITHUB_OUTPUT"
           else
@@ -61,14 +72,17 @@ jobs:
 
       - name: Move autobuild tag
         if: steps.check_latest.outputs.should_build == 'true'
+        timeout-minutes: 10
         run: |
           git tag --force "$TAG_NAME" "$GITHUB_SHA"
-          git push origin "refs/tags/$TAG_NAME" --force
+          bash .github/scripts/retry-command --timeout-seconds 120 -- \
+            git push origin "refs/tags/$TAG_NAME" --force
 
       - name: Upload Release
         if: steps.check_latest.outputs.should_build == 'true'
         id: upload_release
         uses: softprops/action-gh-release@v3
+        timeout-minutes: 10
         with:
           tag_name: ${{ env.TAG_NAME }}
           target_commitish: ${{ github.sha }}
@@ -80,15 +94,18 @@ jobs:
 
       - name: Clean old release assets
         if: steps.check_latest.outputs.should_build == 'true'
+        timeout-minutes: 15
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          assets=$(gh release view "$TAG_NAME" --json assets --jq '.assets[].name')
+          assets=$(bash .github/scripts/retry-command --timeout-seconds 120 -- \
+            gh release view "$TAG_NAME" --json assets --jq '.assets[].name')
           if [ -z "$assets" ]; then
             exit 0
           fi
           while IFS= read -r asset; do
-            gh release delete-asset "$TAG_NAME" "$asset" --yes
+            bash .github/scripts/retry-command --timeout-seconds 120 -- \
+              gh release delete-asset "$TAG_NAME" "$asset" --yes
           done <<< "$assets"
 
   autobuild-x86-windows-macos-linux:
@@ -110,18 +127,22 @@ jobs:
           - os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v7
+        timeout-minutes: 10
 
       - name: Install Rust Stable
         uses: dtolnay/rust-toolchain@master
+        timeout-minutes: 15
         with:
           toolchain: '1.95.0'
           targets: ${{ matrix.target }}
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
+        timeout-minutes: 15
         with:
           save-if: ${{ github.ref == 'refs/heads/dev' }}
           prefix-key: 'v1-rust'
@@ -133,31 +154,42 @@ jobs:
 
       - name: Install dependencies (ubuntu only)
         if: matrix.os == 'ubuntu-22.04'
+        timeout-minutes: 20
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libxslt1.1 libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+          bash .github/scripts/retry-command --timeout-seconds 300 -- \
+            sudo apt-get update
+          bash .github/scripts/retry-command --timeout-seconds 600 -- \
+            sudo apt-get install -y libxslt1.1 libwebkit2gtk-4.1-dev \
+              libayatana-appindicator3-dev librsvg2-dev patchelf
 
       - uses: pnpm/action-setup@v6.0.10
         name: Install pnpm
+        timeout-minutes: 10
         with:
           run_install: false
 
       - name: Install Node
         uses: actions/setup-node@v7
+        timeout-minutes: 15
         with:
           node-version: '24.19.0'
           cache: 'pnpm'
 
       - name: Pnpm install and check
+        timeout-minutes: 30
+        shell: bash
         run: |
-          pnpm install --frozen-lockfile
-          pnpm run prebuild ${{ matrix.target }}
+          bash .github/scripts/retry-command --timeout-seconds 600 -- \
+            pnpm install --frozen-lockfile
+          bash .github/scripts/retry-command --timeout-seconds 900 -- \
+            pnpm run prebuild ${{ matrix.target }}
 
       - name: Release ${{ env.TAG_CHANNEL }} Version
         run: pnpm release-version autobuild-latest
 
       - name: Tauri build for Windows-macOS-Linux
         uses: tauri-apps/tauri-action@v1
+        timeout-minutes: 90
         env:
           NODE_OPTIONS: '--max_old_space_size=4096'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -188,18 +220,22 @@ jobs:
             target: armv7-unknown-linux-gnueabihf
             arch: armhf
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 180
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v7
+        timeout-minutes: 10
 
       - name: Install Rust Stable
         uses: dtolnay/rust-toolchain@master
+        timeout-minutes: 15
         with:
           toolchain: '1.95.0'
           targets: ${{ matrix.target }}
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
+        timeout-minutes: 15
         with:
           save-if: ${{ github.ref == 'refs/heads/dev' }}
           prefix-key: 'v1-rust'
@@ -211,24 +247,30 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6.0.10
+        timeout-minutes: 10
         with:
           run_install: false
 
       - name: Install Node
         uses: actions/setup-node@v7
+        timeout-minutes: 15
         with:
           node-version: '24.19.0'
           cache: 'pnpm'
 
       - name: Pnpm install and check
+        timeout-minutes: 30
         run: |
-          pnpm install --frozen-lockfile
-          pnpm run prebuild ${{ matrix.target }}
+          bash .github/scripts/retry-command --timeout-seconds 600 -- \
+            pnpm install --frozen-lockfile
+          bash .github/scripts/retry-command --timeout-seconds 900 -- \
+            pnpm run prebuild ${{ matrix.target }}
 
       - name: Release ${{ env.TAG_CHANNEL }} Version
         run: pnpm release-version autobuild-latest
 
       - name: 'Setup for linux'
+        timeout-minutes: 30
         run: |-
           sudo ls -lR /etc/apt/
 
@@ -248,31 +290,38 @@ jobs:
           sudo mv /tmp/sources.list /etc/apt/sources.list
 
           sudo dpkg --add-architecture ${{ matrix.arch }}
-          sudo apt update
+          bash .github/scripts/retry-command --timeout-seconds 300 -- \
+            sudo apt update
 
-          sudo apt install -y \
-            libxslt1.1:${{ matrix.arch }} \
-            libwebkit2gtk-4.1-dev:${{ matrix.arch }} \
-            libayatana-appindicator3-dev:${{ matrix.arch }} \
-            libssl-dev:${{ matrix.arch }} \
-            patchelf:${{ matrix.arch }} \
-            librsvg2-dev:${{ matrix.arch }}
+          bash .github/scripts/retry-command --timeout-seconds 900 -- \
+            sudo apt install -y \
+              libxslt1.1:${{ matrix.arch }} \
+              libwebkit2gtk-4.1-dev:${{ matrix.arch }} \
+              libayatana-appindicator3-dev:${{ matrix.arch }} \
+              libssl-dev:${{ matrix.arch }} \
+              patchelf:${{ matrix.arch }} \
+              librsvg2-dev:${{ matrix.arch }}
 
       - name: Install aarch64 tools
         if: matrix.target == 'aarch64-unknown-linux-gnu'
+        timeout-minutes: 20
         run: |
-          sudo apt install -y \
-            gcc-aarch64-linux-gnu \
-            g++-aarch64-linux-gnu
+          bash .github/scripts/retry-command --timeout-seconds 600 -- \
+            sudo apt install -y \
+              gcc-aarch64-linux-gnu \
+              g++-aarch64-linux-gnu
 
       - name: Install armv7 tools
         if: matrix.target == 'armv7-unknown-linux-gnueabihf'
+        timeout-minutes: 20
         run: |
-          sudo apt install -y \
-            gcc-arm-linux-gnueabihf \
-            g++-arm-linux-gnueabihf
+          bash .github/scripts/retry-command --timeout-seconds 600 -- \
+            sudo apt install -y \
+              gcc-arm-linux-gnueabihf \
+              g++-arm-linux-gnueabihf
 
       - name: Tauri Build for Linux
+        timeout-minutes: 165
         run: |
           export PKG_CONFIG_ALLOW_CROSS=1
           if [ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]; then
@@ -282,15 +331,19 @@ jobs:
             export PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig/:$PKG_CONFIG_PATH
             export PKG_CONFIG_SYSROOT_DIR=/usr/arm-linux-gnueabihf/
           fi
-          pnpm build --target ${{ matrix.target }}
+          bash .github/scripts/retry-command --timeout-seconds 3300 -- \
+            pnpm build --target ${{ matrix.target }}
         env:
           NODE_OPTIONS: '--max_old_space_size=4096'
 
       - name: Upload Release
+        timeout-minutes: 30
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "$TAG_NAME" \
-            target/${{ matrix.target }}/release/bundle/deb/*.deb \
-            target/${{ matrix.target }}/release/bundle/rpm/*.rpm \
-            --clobber
+          assets=(
+            target/${{ matrix.target }}/release/bundle/deb/*.deb
+            target/${{ matrix.target }}/release/bundle/rpm/*.rpm
+          )
+          bash .github/scripts/retry-command --timeout-seconds 600 -- \
+            gh release upload "$TAG_NAME" "${assets[@]}" --clobber
