@@ -1,0 +1,41 @@
+name: Retry Failed Workflows
+
+on:
+  workflow_run:
+    workflows:
+      - Auto Build
+      - Cargo Audit
+    types:
+      - completed
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  retry:
+    if: >-
+      (github.event.workflow_run.conclusion == 'failure' ||
+      github.event.workflow_run.conclusion == 'timed_out') &&
+      github.event.workflow_run.run_attempt < 3
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Retry failed jobs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          for attempt in 1 2 3; do
+            if timeout 120 gh run rerun "$RUN_ID" --failed --repo "$GITHUB_REPOSITORY"; then
+              exit 0
+            fi
+
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+
+            delay=$((attempt * 15))
+            echo "Rerun request failed; retrying in $delay seconds"
+            sleep "$delay"
+          done
