@@ -210,18 +210,12 @@ importers:
       https-proxy-agent:
         specifier: ^9.0.0
         version: 9.1.0
-      husky:
-        specifier: ^9.1.7
-        version: 9.1.7
       jiti:
         specifier: ^2.7.0
         version: 2.7.0
       knip:
         specifier: 6.32.1
         version: 6.32.1
-      lint-staged:
-        specifier: ^17.0.5
-        version: 17.3.0
       sass:
         specifier: ^1.100.0
         version: 1.102.0

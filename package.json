@@ -3,7 +3,6 @@
   "version": "2.5.4",
   "license": "GPL-3.0-only",
   "scripts": {
-    "prepare": "husky || true",
     "dev": "node scripts/dev.mjs dev",
     "dev:service": "node scripts/dev.mjs service",
     "dev:sidecar": "node scripts/dev.mjs sidecar",
@@ -108,10 +107,8 @@
     "glob": "^13.0.6",
     "globals": "^17.6.0",
     "https-proxy-agent": "^9.0.0",
-    "husky": "^9.1.7",
     "jiti": "^2.7.0",
     "knip": "6.32.1",
-    "lint-staged": "^17.0.5",
     "sass": "^1.100.0",
     "tar": "^7.5.15",
     "terser": "^5.48.0",
@@ -120,15 +117,6 @@
     "vite": "^8.0.14",
     "vite-plugin-svgr": "^5.2.0",
     "vitest": "^4.1.10"
-  },
-  "lint-staged": {
-    "*.{ts,tsx,js,mjs}": [
-      "eslint --fix --max-warnings=0",
-      "biome format --write"
-    ],
-    "*.{css,scss,json}": [
-      "biome format --write"
-    ]
   },
   "type": "module",
   "packageManager": "pnpm@11.3.0"
