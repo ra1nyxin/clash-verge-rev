@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+tag_name=${1:?release tag is required}
+
+asset_name_for() {
+  case "$1" in
+    *_x64-setup.exe) echo 'clash-x64-setup.exe' ;;
+    *_arm64-setup.exe) echo 'clash-arm64-setup.exe' ;;
+    *_x86-setup.exe | *_i686-setup.exe) echo 'clash-x86-setup.exe' ;;
+    *_x64.dmg) echo 'clash-x64.dmg' ;;
+    *_aarch64.dmg) echo 'clash-arm64.dmg' ;;
+    *_x64.app.tar.gz) echo 'clash-x64.app.tar.gz' ;;
+    *_aarch64.app.tar.gz) echo 'clash-arm64.app.tar.gz' ;;
+    *_amd64.deb) echo 'clash-x64.deb' ;;
+    *.x86_64.rpm) echo 'clash-x64.rpm' ;;
+    *_arm64.deb) echo 'clash-arm64.deb' ;;
+    *.aarch64.rpm) echo 'clash-arm64.rpm' ;;
+    *_armhf.deb) echo 'clash-armv7.deb' ;;
+    *.armhfp.rpm) echo 'clash-armv7.rpm' ;;
+    *) return 1 ;;
+  esac
+}
+
+while IFS=$'\t' read -r asset_id asset_name asset_label; do
+  if ! renamed_asset=$(asset_name_for "$asset_name"); then
+    printf 'Unsupported release asset: %s\n' "$asset_name" >&2
+    exit 1
+  fi
+  if [ "$asset_name" = "$renamed_asset" ] && [ "$asset_label" = "$renamed_asset" ]; then
+    continue
+  fi
+
+  printf 'Rename %s to %s\n' "$asset_name" "$renamed_asset"
+  bash .github/scripts/retry-command --timeout-seconds 120 -- \
+    gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/assets/$asset_id" \
+      -f "name=$renamed_asset" \
+      -f "label=$renamed_asset" >/dev/null
+done < <(bash .github/scripts/retry-command --timeout-seconds 120 -- \
+  gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag_name" --jq '.assets[] | [.id, .name, .label] | @tsv')

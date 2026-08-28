@@ -347,3 +347,19 @@ jobs:
           )
           bash .github/scripts/retry-command --timeout-seconds 600 -- \
             gh release upload "$TAG_NAME" "${assets[@]}" --clobber
+
+  rename-release-assets:
+    name: Rename release assets
+    needs: [update_tag, autobuild-x86-windows-macos-linux, autobuild-arm-linux]
+    if: needs.update_tag.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        timeout-minutes: 10
+
+      - name: Rename uploaded assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash .github/scripts/rename-release-assets "$TAG_NAME"
