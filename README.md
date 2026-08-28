@@ -5,12 +5,6 @@
 
 <p align="center">基于 Tauri 2 和 mihomo 的跨平台代理客户端。</p>
 
-## 界面预览
-
-| 深色模式                          | 浅色模式                           |
-| --------------------------------- | ---------------------------------- |
-| ![深色模式](./docs/preview_dark.png) | ![浅色模式](./docs/preview_light.png) |
-
 ## 下载与安装
 
 请从本仓库的 [Releases](https://github.com/ra1nyxin/clash-verge-rev/releases) 下载对应安装包。
