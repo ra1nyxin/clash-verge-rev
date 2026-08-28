@@ -319,8 +319,6 @@ pub fn run() -> std::process::ExitCode {
         use crate::core::{self, handle};
         use clash_verge_logging::{Type, logging};
         use tauri::AppHandle;
-        #[cfg(target_os = "macos")]
-        use tauri::Manager as _;
 
         pub fn handle_ready_resumed(_app_handle: &AppHandle) {
             if handle::Handle::global().is_exiting() {
@@ -330,11 +328,6 @@ pub fn run() -> std::process::ExitCode {
 
             logging!(info, Type::System, "应用就绪");
             crate::utils::server::set_commands_ready();
-
-            #[cfg(target_os = "macos")]
-            if let Some(window) = _app_handle.get_webview_window("main") {
-                let _ = window.set_title("Clash Verge");
-            }
         }
 
         #[cfg(target_os = "macos")]
