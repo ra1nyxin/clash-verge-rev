@@ -377,7 +377,7 @@ mod tests {
     use std::{ffi::CStr, os::unix::ffi::OsStrExt as _};
 
     fn executable(bundle: &std::path::Path) -> anyhow::Result<std::path::PathBuf> {
-        let executable = bundle.join("Contents/MacOS/clash-verge");
+        let executable = bundle.join("Contents/MacOS/cv");
         let parent = executable
             .parent()
             .ok_or_else(|| anyhow::anyhow!("test executable has no parent"))?;
@@ -450,11 +450,11 @@ mod tests {
         symlink(&escaped_bundle, &link_out)?;
 
         assert!(matches!(
-            evaluate_install_location_with_roots(&link_in.join("Contents/MacOS/clash-verge"), &home, &system),
+            evaluate_install_location_with_roots(&link_in.join("Contents/MacOS/cv"), &home, &system),
             LaunchLocation::Allowed { .. }
         ));
         assert!(matches!(
-            evaluate_install_location_with_roots(&link_out.join("Contents/MacOS/clash-verge"), &home, &system),
+            evaluate_install_location_with_roots(&link_out.join("Contents/MacOS/cv"), &home, &system),
             LaunchLocation::Movable { .. }
         ));
         assert!(allowed_exe.is_file());
@@ -499,7 +499,7 @@ mod tests {
     #[test]
     fn translocation_and_missing_bundle_are_rejected_before_side_effects() {
         let translocated =
-            std::path::Path::new("/private/var/folders/AppTranslocation/Clash Verge.app/Contents/MacOS/clash-verge");
+            std::path::Path::new("/private/var/folders/AppTranslocation/Clash Verge.app/Contents/MacOS/cv");
         assert_eq!(
             evaluate_install_location_with_roots(
                 translocated,
@@ -510,7 +510,7 @@ mod tests {
         );
         assert!(matches!(
             evaluate_install_location_with_roots(
-                std::path::Path::new("/Users/test/Downloads/clash-verge"),
+                std::path::Path::new("/Users/test/Downloads/cv"),
                 std::path::Path::new("/Users/test"),
                 std::path::Path::new("/Applications")
             ),
