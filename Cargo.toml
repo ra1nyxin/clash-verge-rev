@@ -16,10 +16,10 @@ panic = "unwind"
 codegen-units = 1
 lto = "thin"
 opt-level = 3
-debug = 1
-strip = "none"
+debug = 0
+strip = "symbols"
 overflow-checks = false
-split-debuginfo = "unpacked"
+split-debuginfo = "off"
 rpath = false
 
 [profile.dev]
