@@ -123,9 +123,6 @@ importers:
         specifier: ^13.15.35
         version: 13.15.35
     devDependencies:
-      '@actions/github':
-        specifier: ^9.1.1
-        version: 9.1.1
       '@biomejs/biome':
         specifier: ^2.4.15
         version: 2.5.6
