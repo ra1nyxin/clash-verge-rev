@@ -2,7 +2,6 @@ use crate::core::{CoreManager, handle, manager::RunningMode};
 use anyhow::Result;
 use async_trait::async_trait;
 use clash_verge_logging::{Type, logging};
-use once_cell::sync::OnceCell;
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -19,40 +18,11 @@ pub static APP_ID: &str = "io.github.clash-verge-rev.clash-verge-rev.dev";
 #[cfg(feature = "verge-dev")]
 pub static BACKUP_DIR: &str = "clash-verge-rev-backup-dev";
 
-pub static PORTABLE_FLAG: OnceCell<bool> = OnceCell::new();
-
 pub static CLASH_CONFIG: &str = "config.yaml";
 pub static VERGE_CONFIG: &str = "verge.yaml";
 pub static PROFILE_YAML: &str = "profiles.yaml";
 
-pub fn init_portable_flag() -> Result<()> {
-    use tauri::utils::platform::current_exe;
-
-    let app_exe = current_exe()?;
-    if let Some(dir) = app_exe.parent() {
-        let dir = PathBuf::from(dir).join(".config/PORTABLE");
-
-        if dir.exists() {
-            PORTABLE_FLAG.get_or_init(|| true);
-        }
-    }
-    PORTABLE_FLAG.get_or_init(|| false);
-    Ok(())
-}
-
 pub fn app_home_dir() -> Result<PathBuf> {
-    use tauri::utils::platform::current_exe;
-
-    let flag = PORTABLE_FLAG.get().unwrap_or(&false);
-    if *flag {
-        let app_exe = current_exe()?;
-        let app_exe = dunce::canonicalize(app_exe)?;
-        let app_dir = app_exe
-            .parent()
-            .ok_or_else(|| anyhow::anyhow!("failed to get the portable app dir"))?;
-        return Ok(PathBuf::from(app_dir).join(".config").join(APP_ID));
-    }
-
     // Directory helpers can run before the Tauri handle is initialized.
     let app_handle = handle::Handle::app_handle();
 
@@ -66,14 +36,6 @@ pub fn app_home_dir() -> Result<PathBuf> {
 }
 
 pub fn preinit_app_data_dir() -> Result<PathBuf> {
-    if PORTABLE_FLAG.get().copied().unwrap_or(false) {
-        let executable = std::env::current_exe()?;
-        let parent = executable
-            .parent()
-            .ok_or_else(|| anyhow::anyhow!("portable executable has no parent directory"))?;
-        return Ok(parent.join(".config").join(APP_ID));
-    }
-
     #[cfg(target_os = "macos")]
     let root = PathBuf::from(std::env::var_os("HOME").ok_or_else(|| anyhow::anyhow!("HOME is unavailable"))?)
         .join("Library/Application Support");

@@ -130,7 +130,6 @@ mod app_init {
             cmd::open_app_dir,
             cmd::open_logs_dir,
             cmd::open_core_dir,
-            cmd::get_portable_flag,
             cmd::get_network_interfaces,
             cmd::get_system_hostname,
             cmd::restart_app,
@@ -236,8 +235,6 @@ pub fn run() -> std::process::ExitCode {
     {
         return std::process::ExitCode::SUCCESS;
     }
-
-    let _ = utils::dirs::init_portable_flag();
 
     match handle_singleton_startup(app_init::init_singleton_check(), utils::startup::report_error) {
         StartupAction::Continue => {}

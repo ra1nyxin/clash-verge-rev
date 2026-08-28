@@ -16,7 +16,6 @@
     "web:build": "tsc --noEmit && vite build",
     "web:serve": "vite preview",
     "prebuild": "node scripts/prebuild.mjs",
-    "portable": "node scripts/portable.mjs",
     "release-version": "node scripts/release-version.mjs",
     "release:autobuild": "pnpm release-version autobuild",
     "release:deploytest": "pnpm release-version deploytest",

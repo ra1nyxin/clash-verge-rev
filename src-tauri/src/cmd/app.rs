@@ -46,11 +46,6 @@ pub async fn restart_app() -> CmdResult<()> {
 }
 
 #[tauri::command]
-pub fn get_portable_flag() -> bool {
-    *dirs::PORTABLE_FLAG.get().unwrap_or(&false)
-}
-
-#[tauri::command]
 pub fn get_app_dir() -> CmdResult<String> {
     let app_home_dir = dirs::app_home_dir().stringify_err()?.to_string_lossy().into();
     Ok(app_home_dir)
