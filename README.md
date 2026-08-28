@@ -22,12 +22,10 @@
 | Stable    | 正式版本，适合日常使用             |
 | AutoBuild | 滚动构建版本，可能包含尚未稳定的改动 |
 
-安装说明与常见问题可查阅[上游项目文档](https://clash-verge-rev.github.io/)。
-
 ## 功能
 
 - 基于 Rust 和 Tauri 2
-- 内置 [mihomo](https://github.com/MetaCubeX/mihomo) 内核，支持切换 Alpha 内核
+- 内置 mihomo 内核
 - 支持系统代理、守卫和 TUN 模式
 - 支持配置文件管理、Merge、Script 与语法提示
 - 支持代理组、规则、托盘图标、主题颜色和 CSS 自定义
@@ -53,10 +51,6 @@ pnpm build
 ```
 
 `pnpm dev` 会保留开发通道原有的服务状态。使用 `pnpm dev:service` 可安装或更新隔离的开发服务，使用 `pnpm dev:sidecar` 可强制以无特权 Sidecar 模式启动。
-
-## 项目来源
-
-本项目延续自 [Clash Verge](https://github.com/zzzgydi/clash-verge)，主要使用 [Tauri](https://github.com/tauri-apps/tauri)、[mihomo](https://github.com/MetaCubeX/mihomo) 和 [Vite](https://github.com/vitejs/vite)。
 
 ## 许可证
 
