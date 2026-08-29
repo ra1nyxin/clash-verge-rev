@@ -376,10 +376,12 @@ impl CoreManager {
 mod readiness_tests {
     use super::{
         claim_core_readiness_generation, clear_proxy_after_sidecar_termination, poll_sidecar_readiness,
-        should_clear_terminated_sidecar,
+        restore_state_after, should_clear_terminated_sidecar,
     };
     use crate::core::manager::{CoreManager, RunningMode};
     use std::{
+        cell::Cell,
+        panic::{AssertUnwindSafe, catch_unwind},
         sync::{
             Arc,
             atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
@@ -455,6 +457,32 @@ mod readiness_tests {
 
         assert!(guard_stopped.load(Ordering::SeqCst));
         assert_eq!(error.to_string(), "proxy clear failed");
+    }
+
+    #[test]
+    fn scoped_state_is_restored_after_an_error() {
+        let state = Cell::new(0o077);
+        let result: anyhow::Result<()> = restore_state_after(
+            0o022,
+            |previous| state.set(previous),
+            || Err(anyhow::anyhow!("spawn failed")),
+        );
+
+        assert!(result.is_err());
+        assert_eq!(state.get(), 0o022);
+    }
+
+    #[test]
+    fn scoped_state_is_restored_after_a_panic() {
+        let state = Cell::new(0o077);
+        let result = catch_unwind(AssertUnwindSafe(|| {
+            restore_state_after(0o022, |previous| state.set(previous), || {
+                panic!("spawn panicked");
+            });
+        }));
+
+        assert!(result.is_err());
+        assert_eq!(state.get(), 0o022);
     }
 
     #[test]
