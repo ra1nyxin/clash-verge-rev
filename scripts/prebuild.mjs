@@ -581,11 +581,6 @@ const resolveEnableLoopback = () =>
     downloadURL: `https://github.com/Kuingsmile/uwp-tool/releases/download/latest/enableLoopback.exe`,
   })
 
-const resolveSetDnsScript = () =>
-  resolveResource({
-    file: 'set_dns.sh',
-    localPath: path.join(cwd, 'scripts/set_dns.sh'),
-  })
 const resolveUnSetDnsScript = () =>
   resolveResource({
     file: 'unset_dns.sh',
@@ -615,12 +610,6 @@ const tasks = [
     func: resolveServicePermission,
     retry: 5,
     unixOnly: platform === 'linux' || platform === 'darwin',
-  },
-  {
-    name: 'set_dns_script',
-    func: resolveSetDnsScript,
-    retry: 5,
-    macosOnly: true,
   },
   {
     name: 'unset_dns_script',

@@ -56,6 +56,8 @@ pub(crate) fn resolve_setup_async() {
         init_window().await;
         feat::reconcile_startup_tun_availability().await;
         init_resources().await;
+        #[cfg(target_os = "macos")]
+        dns::restore_public_dns().await;
         if let Err(e) = init::init_dns_config().await {
             logging!(warn, Type::Setup, "DNS config initialization failed: {}", e);
         }
