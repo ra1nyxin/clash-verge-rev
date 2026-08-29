@@ -1,8 +1,4 @@
-import {
-  delayProxyByName,
-  healthcheckNodeInProvider,
-  type ProxyDelay,
-} from 'tauri-plugin-mihomo-api'
+import { delayProxyByName, healthcheckNodeInProvider } from 'tauri-plugin-mihomo-api'
 
 import {
   memberDetails,
@@ -347,21 +343,19 @@ export class DelayManager {
       const url = this.getUrl(group)
       debugLog(`[DelayManager] 调用API测试延迟，代理: ${name}, URL: ${url}`)
 
-      const timeoutPromise = new Promise<ProxyDelay>((resolve) => {
-        setTimeout(() => resolve({ delay: 0 }), timeout)
-      })
-
-      const result = await Promise.race([
-        this.unifiedDelayCheck(apiName, url, timeout, providerName),
-        timeoutPromise,
-      ])
+      const result = await this.unifiedDelayCheck(
+        apiName,
+        url,
+        timeout,
+        providerName,
+      )
 
       const elapsedTime = Date.now() - startTime
       if (elapsedTime < 500) {
         await new Promise((resolve) => setTimeout(resolve, 500 - elapsedTime))
       }
 
-      const delay = result.delay
+      const delay = result.delay === 0 ? timeout : result.delay
       const elapsed = elapsedTime
       debugLog(`[DelayManager] 延迟测试完成，代理: ${name}, 结果: ${delay}ms`)
 
