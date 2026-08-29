@@ -84,6 +84,14 @@ fn after_change_clash_mode() {
     });
 }
 
+async fn persist_clash_mode<Save, SaveFuture>(save: Save) -> Result<(), String>
+where
+    Save: FnOnce() -> SaveFuture,
+    SaveFuture: std::future::Future<Output = anyhow::Result<()>>,
+{
+    save().await.map_err(|error| error.to_string().into())
+}
+
 /// Propagates mihomo PATCH failures so the frontend can roll back its optimistic mode.
 pub async fn change_clash_mode(mode: String) -> Result<(), String> {
     let mut mapping = Mapping::new();
@@ -102,10 +110,12 @@ pub async fn change_clash_mode(mode: String) -> Result<(), String> {
     clash.apply();
 
     let clash_data = clash.data_arc();
-    if clash_data.save_config().await.is_ok() {
-        handle::Handle::refresh_clash();
-        tray::Tray::global().update_menu_and_icon().await;
+    if let Err(error) = persist_clash_mode(|| clash_data.save_config()).await {
+        logging!(error, Type::Core, "failed to save clash mode {mode}: {error}");
+        return Err(error);
     }
+    handle::Handle::refresh_clash();
+    tray::Tray::global().update_menu_and_icon().await;
 
     let is_auto_close_connection = Config::verge().await.data_arc().auto_close_connection.unwrap_or(false);
     if is_auto_close_connection {
