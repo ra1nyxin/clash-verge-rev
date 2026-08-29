@@ -64,6 +64,18 @@ fn should_clear_terminated_sidecar(running_mode: &RunningMode, current_pid: Opti
     matches!(running_mode, RunningMode::Sidecar) && current_pid == Some(terminated_pid)
 }
 
+#[cfg(any(unix, test))]
+fn restore_state_after<State, Output>(
+    previous_state: State,
+    restore: impl FnOnce(State),
+    operation: impl FnOnce() -> Output,
+) -> Output {
+    let restore_guard = scopeguard::guard(previous_state, restore);
+    let output = operation();
+    drop(restore_guard);
+    output
+}
+
 async fn clear_proxy_after_sidecar_termination<Clear, ClearFuture, StopGuard, StopGuardFuture>(
     clear_proxy: Clear,
     stop_guard: StopGuard,
@@ -118,36 +130,49 @@ impl CoreManager {
         let clash_core = Config::verge().await.latest_arc().get_valid_clash_core();
         let config_dir = dirs::app_home_dir()?;
 
+        let spawn_sidecar = || {
+            let command = app_handle
+                .shell()
+                .sidecar(clash_core.as_str())
+                .map_err(|error| anyhow::anyhow!("failed to build sidecar command for core {clash_core:?}: {error:#}"))?;
+            let command = command.args([
+                "-d",
+                dirs::path_to_str(&config_dir)?,
+                "-f",
+                dirs::path_to_str(&config_file)?,
+                if cfg!(windows) {
+                    "-ext-ctl-pipe"
+                } else {
+                    "-ext-ctl-unix"
+                },
+                dirs::path_to_str(&sidecar_ipc)?,
+            ]);
+            #[cfg(windows)]
+            let command = command.env(
+                "LISTEN_NAMEDPIPE_SDDL",
+                crate::core::owner_identity::current_user_pipe_sddl()?,
+            );
+            command.spawn().map_err(|error| {
+                anyhow::anyhow!(
+                    "failed to start sidecar core {clash_core:?} with config {} and data directory {}: {error:#}",
+                    config_file.display(),
+                    config_dir.display()
+                )
+            })
+        };
         #[cfg(unix)]
-        let previous_mask = unsafe { tauri_plugin_clash_verge_sysinfo::libc::umask(0o077) };
-        let command = app_handle
-            .shell()
-            .sidecar(clash_core.as_str())
-            .map_err(|error| anyhow::anyhow!("failed to build sidecar command for core {clash_core:?}: {error:#}"))?;
-        let command = command.args([
-            "-d",
-            dirs::path_to_str(&config_dir)?,
-            "-f",
-            dirs::path_to_str(&config_file)?,
-            if cfg!(windows) {
-                "-ext-ctl-pipe"
-            } else {
-                "-ext-ctl-unix"
-            },
-            dirs::path_to_str(&sidecar_ipc)?,
-        ]);
-        #[cfg(windows)]
-        let command = command.env(
-            "LISTEN_NAMEDPIPE_SDDL",
-            crate::core::owner_identity::current_user_pipe_sddl()?,
-        );
-        let (mut rx, child) = command.spawn().map_err(|error| {
-            anyhow::anyhow!(
-                "failed to start sidecar core {clash_core:?} with config {} and data directory {}: {error:#}",
-                config_file.display(),
-                config_dir.display()
-            )
-        })?;
+        let (mut rx, child) = {
+            let previous_mask = unsafe { tauri_plugin_clash_verge_sysinfo::libc::umask(0o077) };
+            restore_state_after(
+                previous_mask,
+                |mask| unsafe {
+                    tauri_plugin_clash_verge_sysinfo::libc::umask(mask);
+                },
+                spawn_sidecar,
+            )?
+        };
+        #[cfg(not(unix))]
+        let (mut rx, child) = spawn_sidecar()?;
         #[cfg(target_os = "windows")]
         let job = {
             match create_and_assign_sidecar_job(child.pid()) {
@@ -167,11 +192,6 @@ impl CoreManager {
                     return Err(error);
                 }
             }
-        };
-
-        #[cfg(unix)]
-        unsafe {
-            tauri_plugin_clash_verge_sysinfo::libc::umask(previous_mask)
         };
 
         let pid = child.pid();
