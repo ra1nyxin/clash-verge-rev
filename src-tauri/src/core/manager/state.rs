@@ -354,12 +354,15 @@ impl CoreManager {
 
 #[cfg(test)]
 mod readiness_tests {
-    use super::{claim_core_readiness_generation, poll_sidecar_readiness, should_clear_terminated_sidecar};
+    use super::{
+        claim_core_readiness_generation, clear_proxy_after_sidecar_termination, poll_sidecar_readiness,
+        should_clear_terminated_sidecar,
+    };
     use crate::core::manager::{CoreManager, RunningMode};
     use std::{
         sync::{
             Arc,
-            atomic::{AtomicU64, AtomicUsize, Ordering},
+            atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
         },
         time::Duration,
     };
@@ -401,6 +404,37 @@ mod readiness_tests {
         assert!(!should_clear_terminated_sidecar(&RunningMode::Sidecar, Some(43), 42));
         assert!(!should_clear_terminated_sidecar(&RunningMode::Service, Some(42), 42));
         assert!(!should_clear_terminated_sidecar(&RunningMode::NotRunning, None, 42));
+    }
+
+    #[tokio::test]
+    async fn successful_sidecar_proxy_clear_keeps_guard_shutdown_as_a_fallback() -> anyhow::Result<()> {
+        let guard_stopped = Arc::new(AtomicBool::new(false));
+        let observed = Arc::clone(&guard_stopped);
+
+        clear_proxy_after_sidecar_termination(
+            || async { Ok(()) },
+            || async move { observed.swap(true, Ordering::SeqCst) },
+        )
+        .await?;
+
+        assert!(!guard_stopped.load(Ordering::SeqCst));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn failed_sidecar_proxy_clear_stops_guard_and_returns_the_error() {
+        let guard_stopped = Arc::new(AtomicBool::new(false));
+        let observed = Arc::clone(&guard_stopped);
+
+        let error = clear_proxy_after_sidecar_termination(
+            || async { Err(anyhow::anyhow!("proxy clear failed")) },
+            || async move { observed.swap(true, Ordering::SeqCst) },
+        )
+        .await
+        .expect_err("proxy clear failure must be preserved");
+
+        assert!(guard_stopped.load(Ordering::SeqCst));
+        assert_eq!(error.to_string(), "proxy clear failed");
     }
 
     #[test]
