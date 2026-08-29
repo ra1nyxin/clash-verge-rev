@@ -64,6 +64,23 @@ fn should_clear_terminated_sidecar(running_mode: &RunningMode, current_pid: Opti
     matches!(running_mode, RunningMode::Sidecar) && current_pid == Some(terminated_pid)
 }
 
+async fn clear_proxy_after_sidecar_termination<Clear, ClearFuture, StopGuard, StopGuardFuture>(
+    clear_proxy: Clear,
+    stop_guard: StopGuard,
+) -> Result<()>
+where
+    Clear: FnOnce() -> ClearFuture,
+    ClearFuture: std::future::Future<Output = Result<()>>,
+    StopGuard: FnOnce() -> StopGuardFuture,
+    StopGuardFuture: std::future::Future<Output = bool>,
+{
+    let result = clear_proxy().await;
+    if result.is_err() {
+        stop_guard().await;
+    }
+    result
+}
+
 #[cfg(target_os = "windows")]
 use {
     std::os::windows::io::{AsRawHandle as _, FromRawHandle as _, OwnedHandle},
@@ -322,8 +339,16 @@ impl CoreManager {
         let _ = self.take_child_sidecar();
         #[cfg(target_os = "windows")]
         self.set_job_handle(None);
-        proxy_control::stop_guard().await;
+        let clear_result =
+            clear_proxy_after_sidecar_termination(proxy_control::clear, proxy_control::stop_guard).await;
         self.core_stopped();
+        if let Err(error) = clear_result {
+            logging!(
+                error,
+                Type::Core,
+                "failed to clear system proxy after sidecar PID {terminated_pid} terminated: {error:#}"
+            );
+        }
     }
 }
 
