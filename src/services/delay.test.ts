@@ -1,4 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import {
+  delayProxyByName,
+  healthcheckNodeInProvider,
+} from 'tauri-plugin-mihomo-api'
 
 vi.mock('tauri-plugin-mihomo-api', () => ({
   delayProxyByName: vi.fn(async () => ({ delay: 120 })),
@@ -27,6 +31,10 @@ let settles = 0
 let unsubscribe: () => void
 
 beforeEach(() => {
+  vi.mocked(delayProxyByName).mockReset().mockResolvedValue({ delay: 120 })
+  vi.mocked(healthcheckNodeInProvider)
+    .mockReset()
+    .mockResolvedValue({ delay: 120 })
   settles = 0
   unsubscribe = delayManager.addGroupListener('g', () => {
     settles += 1
@@ -74,5 +82,40 @@ describe('delay cache retention', () => {
     expect(manager.getDelay('removed', 'g')).toBe(-1)
     manager.setDelay('removed', 'g', 30)
     expect(manager.getDelay('removed', 'g')).toBe(-1)
+  })
+})
+
+describe('delay timeout handling', () => {
+  test('stores the timeout threshold instead of zero', async () => {
+    vi.mocked(delayProxyByName).mockResolvedValueOnce({ delay: 0 })
+    const manager = new DelayManager()
+
+    const update = await manager.checkDelay(node('timeout') as never, 'g', 200)
+
+    expect(update.delay).toBe(200)
+    expect(manager.getDelay('timeout', 'g')).toBe(200)
+  })
+
+  test('waits for the bounded plugin request instead of abandoning it', async () => {
+    let resolveRequest!: (value: { delay: number }) => void
+    vi.mocked(delayProxyByName).mockImplementationOnce(
+      () =>
+        new Promise<{ delay: number }>((resolve) => {
+          resolveRequest = resolve
+        }),
+    )
+    const manager = new DelayManager()
+    let settled = false
+
+    const pending = manager
+      .checkDelay(node('slow') as never, 'g', 10)
+      .finally(() => {
+        settled = true
+      })
+    await new Promise((resolve) => setTimeout(resolve, 550))
+
+    expect(settled).toBe(false)
+    resolveRequest({ delay: 120 })
+    await expect(pending).resolves.toMatchObject({ delay: 120 })
   })
 })
