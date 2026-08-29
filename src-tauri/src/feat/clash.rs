@@ -193,3 +193,36 @@ pub async fn test_delay(url: String) -> anyhow::Result<u32> {
     .await
     .unwrap_or(Ok(10000u32))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::persist_clash_mode;
+    use std::sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    };
+
+    #[tokio::test]
+    async fn clash_mode_persistence_accepts_a_successful_save() {
+        let save_called = Arc::new(AtomicBool::new(false));
+        let observed = Arc::clone(&save_called);
+
+        persist_clash_mode(|| async move {
+            observed.store(true, Ordering::SeqCst);
+            Ok(())
+        })
+        .await
+        .expect("successful saves must pass through");
+
+        assert!(save_called.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn clash_mode_persistence_returns_a_disk_error() {
+        let error = persist_clash_mode(|| async { Err(anyhow::anyhow!("disk full")) })
+            .await
+            .expect_err("save failures must reach the caller");
+
+        assert_eq!(error, "disk full");
+    }
+}
