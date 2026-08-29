@@ -63,6 +63,22 @@ const closeSharedSocket = async (entry: SharedSubscriptionEntry) => {
   await ws.close()
 }
 
+export const initializeMihomoWebSocket = async (
+  ws: MihomoWebSocket,
+  initialize: () => Promise<void> | void,
+) => {
+  try {
+    await initialize()
+  } catch (error) {
+    try {
+      await ws.close()
+    } catch {
+      // Preserve the initialization error that caused this socket to be rejected.
+    }
+    throw error
+  }
+}
+
 const createSharedSubscriptionEntry = (
   connect: () => Promise<MihomoWebSocket>,
 ): SharedSubscriptionEntry => {
@@ -98,19 +114,20 @@ const createSharedSubscriptionEntry = (
       }
 
       const owner = pickActiveOwner(entry)
-      await owner?.onConnected?.(ws)
+      await initializeMihomoWebSocket(ws, async () => {
+        await owner?.onConnected?.(ws)
+        ws.addListener((msg: Message) => {
+          if (msg.type !== 'Text') return
+          const activeOwner = pickActiveOwner(entry)
+          if (!activeOwner) return
+
+          activeOwner.handleMessage(msg.data)
+        })
+      })
       if (entry.closed) {
         await ws.close()
         return
       }
-
-      ws.addListener((msg: Message) => {
-        if (msg.type !== 'Text') return
-        const activeOwner = pickActiveOwner(entry)
-        if (!activeOwner) return
-
-        activeOwner.handleMessage(msg.data)
-      })
 
       entry.ws = ws
       syncSharedWsRefs(entry)
